@@ -35,7 +35,9 @@ body.theme-dark {
 
 .topbar h1 { font-size: 1.5rem; margin: 0; }
 
-.topbar-actions { display: flex; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.current-user { font-size: 0.85rem; color: #666; margin-right: 4px; }
+.logout-form { display: inline; margin: 0; }
 
 .btn {
     padding: 8px 16px;

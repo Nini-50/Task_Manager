@@ -4,6 +4,7 @@ import com.academictaskmanager.model.AcademicTask;
 import com.academictaskmanager.model.Course;
 import com.academictaskmanager.model.TaskStatus;
 import com.academictaskmanager.model.TaskType;
+import com.academictaskmanager.model.User;
 import com.academictaskmanager.repository.AcademicTaskRepository;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -57,7 +58,8 @@ public class SyllabusParsingService {
     }
 
     /** Persists the previously-extracted candidate tasks the student chose to keep. */
-    public List<AcademicTask> saveTasks(List<AcademicTask> tasks) {
+    public List<AcademicTask> saveTasks(List<AcademicTask> tasks, User owner) {
+        tasks.forEach(task -> task.setOwner(owner));
         return taskRepository.saveAll(tasks);
     }
 

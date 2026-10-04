@@ -253,7 +253,13 @@ async function onPreviewSyllabus() {
     }
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
-    const res = await fetch('/api/syllabus/preview', { method: 'POST', body: formData });
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+    const res = await fetch('/api/syllabus/preview', {
+        method: 'POST',
+        headers: csrfToken && csrfHeader ? { [csrfHeader]: csrfToken } : undefined,
+        body: formData,
+    });
     const candidates = await res.json();
     if (!Array.isArray(candidates)) {
         alert(candidates.message || 'Could not parse file.');
@@ -290,9 +296,13 @@ async function onConfirmSyllabus() {
 /* ---------------- Helpers ---------------- */
 
 async function api(url, method = 'GET', body) {
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+    const headers = body ? { 'Content-Type': 'application/json' } : {};
+    if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
     const res = await fetch(url, {
         method,
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        headers,
         body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {

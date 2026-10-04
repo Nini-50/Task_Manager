@@ -44,6 +44,11 @@ public class AcademicTask {
     /** True when this task was parsed out of an uploaded syllabus rather than Canvas or manual entry. */
     private boolean fromSyllabus = false;
 
+    /** The account this task belongs to. */
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
@@ -76,6 +81,9 @@ public class AcademicTask {
 
     public boolean isFromSyllabus() { return fromSyllabus; }
     public void setFromSyllabus(boolean fromSyllabus) { this.fromSyllabus = fromSyllabus; }
+
+    public User getOwner() { return owner; }
+    public void setOwner(User owner) { this.owner = owner; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

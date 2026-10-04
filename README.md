@@ -6,6 +6,7 @@ Canvas LMS sync and syllabus-to-calendar import.
 
 ## Features (MVP)
 
+- **Accounts** — create an account (username + password) so your courses, tasks, and settings are kept private to you, even on a shared browser/deployment.
 - **Dashboard** — weekly calendar view of upcoming assignments/quizzes/exams/events, plus a to-do list widget.
 - **To-Do lists** — add, prioritize, complete, and delete personal tasks.
 - **Canvas LMS sync** — connect your school's Canvas instance with a personal access token to pull in courses and assignment due dates (`/api/canvas/sync`).
@@ -14,7 +15,7 @@ Canvas LMS sync and syllabus-to-calendar import.
 
 ## Tech stack
 
-- Java 21, Spring Boot 3.3 (Web MVC, Spring Data JPA, Thymeleaf, Validation)
+- Java 21, Spring Boot 3.3 (Web MVC, Spring Data JPA, Spring Security, Thymeleaf, Validation)
 - H2 file-based database (no external DB setup needed)
 - Apache PDFBox for syllabus text extraction
 - Vanilla HTML/CSS/JS front end (no build step required)
@@ -25,10 +26,15 @@ Canvas LMS sync and syllabus-to-calendar import.
 ./mvnw spring-boot:run
 ```
 
-Then open http://localhost:8080 in your browser. Data is stored in `./data/`
-(H2 file database, git-ignored) so it persists across restarts. The H2 web
-console is available at http://localhost:8080/h2-console for inspecting data
-during development (JDBC URL: `jdbc:h2:file:./data/academic-task-manager`).
+Then open http://localhost:8080 — you'll be redirected to **/login**. Click
+**Create an account**, pick a username and password (8+ characters), then log
+in. Everything you add from there (courses, tasks, settings) is scoped to
+your account. Data is stored in `./data/` (H2 file database, git-ignored) so
+it persists across restarts — accounts and data are per-browser-session
+(simple form login + cookie session), not a hosted multi-device identity
+system. The H2 web console is available at http://localhost:8080/h2-console
+for inspecting data during development (JDBC URL:
+`jdbc:h2:file:./data/academic-task-manager`).
 
 ## Connecting Canvas
 

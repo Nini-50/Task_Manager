@@ -1,6 +1,7 @@
 package com.academictaskmanager.service;
 
 import com.academictaskmanager.model.Course;
+import com.academictaskmanager.model.User;
 import com.academictaskmanager.repository.CourseRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,34 +23,42 @@ class CourseServiceTest {
     private CourseRepository courseRepository;
 
     private CourseService courseService;
+    private User owner;
 
     @BeforeEach
     void setUp() {
         courseService = new CourseService(courseRepository);
+        owner = new User();
+        owner.setId(1L);
+        owner.setUsername("alice");
     }
 
     @Test
     void findAllDelegatesToRepository() {
         Course course = new Course();
         course.setName("Intro to CS");
-        when(courseRepository.findAll()).thenReturn(List.of(course));
+        when(courseRepository.findByOwner(owner)).thenReturn(List.of(course));
 
-        assertThat(courseService.findAll()).containsExactly(course);
+        assertThat(courseService.findAll(owner)).containsExactly(course);
     }
 
     @Test
     void findByIdThrowsWhenMissing() {
-        when(courseRepository.findById(5L)).thenReturn(Optional.empty());
+        when(courseRepository.findByIdAndOwner(5L, owner)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> courseService.findById(5L))
+        assertThatThrownBy(() -> courseService.findById(5L, owner))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("5");
     }
 
     @Test
     void deleteDelegatesToRepository() {
-        courseService.delete(3L);
+        Course course = new Course();
+        course.setId(3L);
+        when(courseRepository.findByIdAndOwner(3L, owner)).thenReturn(Optional.of(course));
 
-        verify(courseRepository).deleteById(3L);
+        courseService.delete(3L, owner);
+
+        verify(courseRepository).delete(course);
     }
 }

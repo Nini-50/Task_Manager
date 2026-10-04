@@ -1,5 +1,6 @@
 package com.academictaskmanager.service;
 
+import com.academictaskmanager.model.User;
 import com.academictaskmanager.model.UserSettings;
 import com.academictaskmanager.repository.UserSettingsRepository;
 import org.springframework.stereotype.Service;
@@ -13,13 +14,18 @@ public class SettingsService {
         this.settingsRepository = settingsRepository;
     }
 
-    /** This MVP is single-user, so there is always exactly one settings row, created on first access. */
-    public UserSettings getSettings() {
-        return settingsRepository.findAll().stream().findFirst()
-                .orElseGet(() -> settingsRepository.save(new UserSettings()));
+    /** Each account has exactly one settings row, created lazily on first access. */
+    public UserSettings getSettings(User owner) {
+        return settingsRepository.findByOwner(owner)
+                .orElseGet(() -> {
+                    UserSettings settings = new UserSettings();
+                    settings.setOwner(owner);
+                    return settingsRepository.save(settings);
+                });
     }
 
-    public UserSettings save(UserSettings settings) {
+    public UserSettings save(UserSettings settings, User owner) {
+        settings.setOwner(owner);
         return settingsRepository.save(settings);
     }
 }
