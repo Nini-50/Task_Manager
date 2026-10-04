@@ -80,7 +80,7 @@ public class SportsService {
         String teamFilter = favoriteTeam == null ? "" : favoriteTeam.trim().toLowerCase();
         List<SportsGameDto> games = new ArrayList<>();
         for (EspnEventDto event : board.getEvents()) {
-            SportsGameDto game = toGameDto(event, teamFilter);
+            SportsGameDto game = toGameDto(event, teamFilter, leaguePath);
             if (game != null) {
                 games.add(game);
             }
@@ -140,14 +140,14 @@ public class SportsService {
         TeamScheduleDto result = new TeamScheduleDto();
         String teamFilter = favoriteTeam.trim().toLowerCase();
         if (previous != null) {
-            SportsGameDto dto = toGameDto(previous, teamFilter);
+            SportsGameDto dto = toGameDto(previous, teamFilter, leaguePath);
             if (dto != null) {
                 dto.setFavorite(true);
                 result.setPreviousGame(dto);
             }
         }
         if (next != null) {
-            SportsGameDto dto = toGameDto(next, teamFilter);
+            SportsGameDto dto = toGameDto(next, teamFilter, leaguePath);
             if (dto != null) {
                 dto.setFavorite(true);
                 result.setNextGame(dto);
@@ -229,7 +229,7 @@ public class SportsService {
         return null;
     }
 
-    private SportsGameDto toGameDto(EspnEventDto event, String teamFilter) {
+    private SportsGameDto toGameDto(EspnEventDto event, String teamFilter, String leaguePath) {
         if (event.getCompetitions() == null || event.getCompetitions().isEmpty()) {
             return null;
         }
@@ -241,6 +241,7 @@ public class SportsService {
         SportsGameDto dto = new SportsGameDto();
         dto.setShortName(event.getShortName() != null ? event.getShortName() : event.getName());
         dto.setDate(event.getDate());
+        dto.setEspnUrl(espnGameUrl(leaguePath, event.getId()));
         EspnStatusDto status = statusOf(event);
         if (status != null && status.getType() != null) {
             dto.setStatusDetail(status.getType().getDescription());
@@ -264,6 +265,21 @@ public class SportsService {
         }
         dto.setFavorite(favorite);
         return dto;
+    }
+
+    /**
+     * Builds a link to this game's page on espn.com. ESPN's site URLs use just the sport's short
+     * segment (e.g. "nfl"), not the full API league path (e.g. "football/nfl"), so the leading
+     * segment is stripped off.
+     */
+    private String espnGameUrl(String leaguePath, String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            return null;
+        }
+        String sportSegment = leaguePath.contains("/")
+                ? leaguePath.substring(leaguePath.lastIndexOf('/') + 1)
+                : leaguePath;
+        return "https://www.espn.com/" + sportSegment + "/game/_/gameId/" + eventId;
     }
 
     private boolean matchesTeam(EspnTeamDto team, String teamFilter) {

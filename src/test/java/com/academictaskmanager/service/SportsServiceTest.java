@@ -74,6 +74,7 @@ class SportsServiceTest {
         }
 
         EspnEventDto event = new EspnEventDto();
+        event.setId("401872658");
         event.setShortName(shortName);
         event.setDate(date);
         event.setCompetitions(List.of(competition));
@@ -160,6 +161,7 @@ class SportsServiceTest {
         assertThat(games.get(0).isFavorite()).isTrue();
         assertThat(games.get(0).getAwayTeam()).isEqualTo("Boston Celtics");
         assertThat(games.get(0).getHomeScore()).isEqualTo("101");
+        assertThat(games.get(0).getEspnUrl()).isEqualTo("https://www.espn.com/nba/game/_/gameId/401872658");
     }
 
     @Test
@@ -228,6 +230,7 @@ class SportsServiceTest {
         assertThat(result.getPreviousGame()).isNotNull();
         assertThat(result.getPreviousGame().getShortName()).isEqualTo("BOS @ CLE");
         assertThat(result.getPreviousGame().isFavorite()).isTrue();
+        assertThat(result.getPreviousGame().getEspnUrl()).isEqualTo("https://www.espn.com/nba/game/_/gameId/401872658");
         assertThat(result.getNextGame()).isNotNull();
         assertThat(result.getNextGame().getShortName()).isEqualTo("PHI @ BOS");
         assertThat(result.getNextGame().isFavorite()).isTrue();

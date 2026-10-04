@@ -320,8 +320,7 @@ async function buildSportsWidget() {
         }
         const rows = games.map(g => `
             <li class="${g.favorite ? 'favorite' : ''}">
-                ${scoreboardTable(g)}
-                <span class="meta">${escapeHtml(g.statusDetail || '')}</span>
+                ${gameLink(g, `${scoreboardTable(g)}<span class="meta">${escapeHtml(g.statusDetail || '')}</span>`)}
             </li>`).join('');
         w.innerHTML = `<h3>🏈 Sports</h3><ul class="sports-list">${rows}</ul>`;
     } catch (err) {
@@ -332,12 +331,21 @@ async function buildSportsWidget() {
 
 function sportsGameRow(g, label) {
     const dateStr = g.date ? new Date(g.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
-    return `
-        <li class="favorite">
-            <span class="meta">${escapeHtml(label)}${dateStr ? ' · ' + dateStr : ''}</span>
-            ${scoreboardTable(g)}
-            <span class="meta">${escapeHtml(g.statusDetail || '')}</span>
-        </li>`;
+    const inner = `
+        <span class="meta">${escapeHtml(label)}${dateStr ? ' · ' + dateStr : ''}</span>
+        ${scoreboardTable(g)}
+        <span class="meta">${escapeHtml(g.statusDetail || '')}</span>`;
+    return `<li class="favorite">${gameLink(g, inner)}</li>`;
+}
+
+/**
+ * Wraps a game bubble's inner markup in a link to its espn.com game page when one is available,
+ * so clicking the bubble takes the student to full ESPN coverage; falls back to a plain span
+ * (no link) if the backend couldn't resolve an ESPN event id for this game.
+ */
+function gameLink(g, innerHtml) {
+    if (!g.espnUrl) return `<span class="game-link">${innerHtml}</span>`;
+    return `<a class="game-link" href="${escapeHtml(g.espnUrl)}" target="_blank" rel="noopener noreferrer">${innerHtml}</a>`;
 }
 
 /**

@@ -12,9 +12,14 @@ public class SportsGameDto {
     private boolean favorite;
     /** ISO-8601 kickoff/tip-off time; only populated for team-schedule lookups (previous/next game). */
     private String date;
+    /** Link to this game's page on espn.com, so students can click through for full coverage. */
+    private String espnUrl;
 
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }
+
+    public String getEspnUrl() { return espnUrl; }
+    public void setEspnUrl(String espnUrl) { this.espnUrl = espnUrl; }
 
     public String getShortName() { return shortName; }
     public void setShortName(String shortName) { this.shortName = shortName; }
