@@ -66,7 +66,21 @@
                 <input type="text" id="displayName">
             </label>
             <label>Theme color
-                <input type="color" id="themeColor">
+                <div id="themeSwatches" class="theme-swatches">
+                    <button type="button" class="swatch swatch-red" data-theme="red" title="Red"></button>
+                    <button type="button" class="swatch swatch-orange" data-theme="orange" title="Orange"></button>
+                    <button type="button" class="swatch swatch-yellow" data-theme="yellow" title="Yellow"></button>
+                    <button type="button" class="swatch swatch-green" data-theme="green" title="Green"></button>
+                    <button type="button" class="swatch swatch-teal" data-theme="teal" title="Teal"></button>
+                    <button type="button" class="swatch swatch-light-blue" data-theme="light-blue" title="Light blue"></button>
+                    <button type="button" class="swatch swatch-dark-blue" data-theme="dark-blue" title="Dark blue"></button>
+                    <button type="button" class="swatch swatch-light-pink" data-theme="light-pink" title="Light pink"></button>
+                    <button type="button" class="swatch swatch-hot-pink" data-theme="hot-pink" title="Hot pink"></button>
+                    <button type="button" class="swatch swatch-lavender" data-theme="lavender" title="Lavender"></button>
+                    <button type="button" class="swatch swatch-purple" data-theme="purple" title="Purple"></button>
+                    <button type="button" class="swatch swatch-brown" data-theme="brown" title="Brown"></button>
+                </div>
+                <input type="hidden" id="themeColor">
             </label>
             <label>Theme mode
                 <select id="themeMode">

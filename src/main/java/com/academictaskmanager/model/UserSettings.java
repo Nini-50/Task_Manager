@@ -22,7 +22,8 @@ public class UserSettings {
 
     private String displayName = "Student";
 
-    /** Primary accent color for the dashboard theme, e.g. "#4f46e5". */
+    /** Dashboard theme: one of the named palette keys (e.g. "teal", "hot-pink")
+     *  from the theme picker, or the default indigo accent (#4f46e5) if unset. */
     private String themeColor = "#4f46e5";
 
     private String themeMode = "light"; // light | dark

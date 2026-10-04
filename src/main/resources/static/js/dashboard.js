@@ -1,5 +1,10 @@
 /* Dashboard front-end: talks to the Spring Boot REST API under /api/* */
 
+const THEME_KEYS = [
+    'red', 'orange', 'yellow', 'green', 'teal', 'light-blue',
+    'dark-blue', 'light-pink', 'hot-pink', 'lavender', 'purple', 'brown',
+];
+
 const state = {
     weekStart: startOfWeek(new Date()),
     settings: null,
@@ -25,6 +30,7 @@ function wireEvents() {
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
     document.getElementById('closeSettingsBtn').addEventListener('click', () => toggleModal('settingsModal', false));
     document.getElementById('settingsForm').addEventListener('submit', onSaveSettings);
+    document.getElementById('themeSwatches').addEventListener('click', onSwatchClick);
 
     document.getElementById('syncCanvasBtn').addEventListener('click', onSyncCanvas);
 
@@ -149,14 +155,30 @@ async function loadSettings() {
 
 function applyTheme() {
     const s = state.settings;
-    document.documentElement.style.setProperty('--theme-color', s.themeColor || '#4f46e5');
+    document.body.classList.remove(...THEME_KEYS.map(k => `theme-${k}`));
+    if (s.themeColor && THEME_KEYS.includes(s.themeColor)) {
+        document.body.classList.add(`theme-${s.themeColor}`);
+    }
     document.body.classList.toggle('theme-dark', s.themeMode === 'dark');
+}
+
+function selectSwatch(key) {
+    document.getElementById('themeColor').value = key;
+    document.querySelectorAll('#themeSwatches .swatch').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.theme === key);
+    });
+}
+
+function onSwatchClick(e) {
+    const btn = e.target.closest('.swatch');
+    if (!btn) return;
+    selectSwatch(btn.dataset.theme);
 }
 
 function openSettingsModal() {
     const s = state.settings;
     document.getElementById('displayName').value = s.displayName || '';
-    document.getElementById('themeColor').value = s.themeColor || '#4f46e5';
+    selectSwatch(THEME_KEYS.includes(s.themeColor) ? s.themeColor : THEME_KEYS[0]);
     document.getElementById('themeMode').value = s.themeMode || 'light';
     document.getElementById('weatherWidgetEnabled').checked = !!s.weatherWidgetEnabled;
     document.getElementById('weatherLocation').value = s.weatherLocation || '';
