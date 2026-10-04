@@ -6,6 +6,7 @@ import com.academictaskmanager.model.AcademicTask;
 import com.academictaskmanager.model.Course;
 import com.academictaskmanager.model.TaskStatus;
 import com.academictaskmanager.model.TaskType;
+import com.academictaskmanager.model.User;
 import com.academictaskmanager.model.UserSettings;
 import com.academictaskmanager.repository.AcademicTaskRepository;
 import com.academictaskmanager.repository.CourseRepository;
@@ -41,9 +42,9 @@ public class CanvasSyncService {
 
     /**
      * Pulls active courses and their assignments from Canvas and upserts them
-     * locally. Returns the number of tasks created or updated.
+     * locally for the given owner. Returns the number of tasks created or updated.
      */
-    public int sync(UserSettings settings) {
+    public int sync(UserSettings settings, User owner) {
         if (settings.getCanvasBaseUrl() == null || settings.getCanvasApiToken() == null) {
             throw new IllegalStateException("Canvas base URL and API token must be configured before syncing.");
         }
@@ -61,8 +62,9 @@ public class CanvasSyncService {
         }
 
         for (CanvasCourseDto canvasCourse : canvasCourses) {
-            Course course = courseRepository.findByCanvasCourseId(canvasCourse.getId())
+            Course course = courseRepository.findByOwnerAndCanvasCourseId(owner, canvasCourse.getId())
                     .orElseGet(Course::new);
+            course.setOwner(owner);
             course.setCanvasCourseId(canvasCourse.getId());
             course.setName(canvasCourse.getName());
             course.setCode(canvasCourse.getCourseCode());
@@ -79,8 +81,9 @@ public class CanvasSyncService {
             }
 
             for (CanvasAssignmentDto assignment : assignments) {
-                AcademicTask task = taskRepository.findByCanvasAssignmentId(assignment.getId())
+                AcademicTask task = taskRepository.findByOwnerAndCanvasAssignmentId(owner, assignment.getId())
                         .orElseGet(AcademicTask::new);
+                task.setOwner(owner);
                 task.setCanvasAssignmentId(assignment.getId());
                 task.setTitle(assignment.getName());
                 task.setDescription(stripHtml(assignment.getDescription()));

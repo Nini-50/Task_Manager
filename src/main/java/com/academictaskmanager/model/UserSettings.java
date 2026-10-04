@@ -3,10 +3,9 @@ package com.academictaskmanager.model;
 import jakarta.persistence.*;
 
 /**
- * Holds per-user customization preferences (theme color, which optional
+ * Holds per-account customization preferences (theme color, which optional
  * widgets are enabled such as weather/sports) plus Canvas LMS connection
- * details. For this MVP there is a single settings row (single-user app);
- * it can be extended to a per-account table later.
+ * details. Each user account has exactly one settings row.
  */
 @Entity
 @Table(name = "user_settings")
@@ -15,6 +14,11 @@ public class UserSettings {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** The account these settings belong to; one-to-one. */
+    @OneToOne(optional = false)
+    @JoinColumn(name = "owner_id", unique = true)
+    private User owner;
 
     private String displayName = "Student";
 
@@ -44,6 +48,9 @@ public class UserSettings {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public User getOwner() { return owner; }
+    public void setOwner(User owner) { this.owner = owner; }
 
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }

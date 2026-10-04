@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log in · Academic Task Manager</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-body">
+<div class="auth-card">
+    <h1>📚 Academic Task Manager</h1>
+    <p class="auth-subtitle">Log in to see your courses and assignments.</p>
+
+    <p th:if="${param.error}" class="auth-error">Incorrect username or password.</p>
+    <p th:if="${param.logout}" class="auth-success">You've been logged out.</p>
+    <p th:if="${param.registered}" class="auth-success">Account created — log in below.</p>
+
+    <form th:action="@{/login}" method="post" class="auth-form">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autofocus>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit" class="btn btn-primary">Log in</button>
+    </form>
+
+    <p class="auth-switch">New here? <a th:href="@{/register}">Create an account</a></p>
+</div>
+</body>
+</html>

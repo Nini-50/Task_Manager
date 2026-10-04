@@ -1,5 +1,6 @@
 package com.academictaskmanager.service;
 
+import com.academictaskmanager.model.User;
 import com.academictaskmanager.model.UserSettings;
 import com.academictaskmanager.repository.AcademicTaskRepository;
 import com.academictaskmanager.repository.CourseRepository;
@@ -21,12 +22,14 @@ class CanvasSyncServiceTest {
     @Mock
     private AcademicTaskRepository taskRepository;
 
+    private final User owner = new User();
+
     @Test
     void syncRequiresCanvasBaseUrlAndToken() {
         CanvasSyncService service = new CanvasSyncService(restClient, courseRepository, taskRepository);
         UserSettings settings = new UserSettings();
 
-        assertThatThrownBy(() -> service.sync(settings))
+        assertThatThrownBy(() -> service.sync(settings, owner))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Canvas base URL");
     }
@@ -37,7 +40,7 @@ class CanvasSyncServiceTest {
         UserSettings settings = new UserSettings();
         settings.setCanvasBaseUrl("https://school.instructure.com");
 
-        assertThatThrownBy(() -> service.sync(settings))
+        assertThatThrownBy(() -> service.sync(settings, owner))
                 .isInstanceOf(IllegalStateException.class);
     }
 }

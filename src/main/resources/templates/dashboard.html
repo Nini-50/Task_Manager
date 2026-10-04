@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <title>Academic Task Manager</title>
     <link rel="stylesheet" href="/css/dashboard.css">
 </head>
@@ -11,11 +13,16 @@
     <header class="topbar">
         <h1>📚 Academic Task Manager</h1>
         <div class="topbar-actions">
+            <span class="current-user" sec:authentication="name"></span>
             <button id="syncCanvasBtn" class="btn btn-outline">Sync Canvas</button>
             <button id="uploadSyllabusBtn" class="btn btn-outline">Upload Syllabus</button>
             <button id="settingsBtn" class="btn btn-icon" title="Customize">⚙️</button>
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <button type="submit" class="btn btn-outline">Log out</button>
+            </form>
         </div>
     </header>
+
 
     <main class="dashboard-grid">
         <section class="card calendar-card">

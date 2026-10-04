@@ -2,6 +2,7 @@ package com.academictaskmanager.service;
 
 import com.academictaskmanager.model.AcademicTask;
 import com.academictaskmanager.model.TaskType;
+import com.academictaskmanager.model.User;
 import com.academictaskmanager.repository.AcademicTaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,8 +71,9 @@ class SyllabusParsingServiceTest {
     @Test
     void saveTasksDelegatesToRepository() {
         List<AcademicTask> tasks = List.of(new AcademicTask());
+        User owner = new User();
 
-        syllabusParsingService.saveTasks(tasks);
+        syllabusParsingService.saveTasks(tasks, owner);
 
         verify(taskRepository).saveAll(tasks);
     }
