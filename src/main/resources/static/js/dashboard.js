@@ -76,10 +76,13 @@ async function renderCalendar() {
         col.className = 'calendar-day';
         col.innerHTML = `<div class="day-label">${day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</div>`;
         dayTasks.forEach(t => {
+            const urgency = urgencyFor(t.priority);
+            const isCompleted = t.status === 'COMPLETED';
+            const isOverdue = !isCompleted && new Date(t.dueDate).getTime() < Date.now();
             const tag = document.createElement('div');
-            tag.className = 'calendar-task';
-            tag.title = t.title;
-            tag.textContent = t.title;
+            tag.className = ['calendar-task', urgency.className, isOverdue ? 'overdue' : ''].filter(Boolean).join(' ');
+            tag.title = `${t.title} — ${urgency.label} urgency${isOverdue ? ' (overdue)' : ''}`;
+            tag.textContent = `${urgency.icon} ${t.title}`;
             col.appendChild(tag);
         });
         body.appendChild(col);
