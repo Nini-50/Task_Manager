@@ -163,8 +163,9 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
     text-overflow: ellipsis;
 }
 
-.todo-form { display: flex; gap: 8px; margin-bottom: 12px; }
-.todo-form input[type="text"] { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+.todo-form { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.todo-form input[type="text"] { flex: 1; min-width: 140px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+.todo-form input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
 .todo-form select { padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
 
 .todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -173,15 +174,45 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding: 10px 12px;
     border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
     border-radius: 8px;
 }
 
+.todo-item.urgency-low { border-left-color: #4caf50; }
+.todo-item.urgency-medium { border-left-color: #f0ad4e; }
+.todo-item.urgency-high { border-left-color: #e53935; }
+
 .todo-item.completed { opacity: 0.5; text-decoration: line-through; }
+.todo-item.overdue:not(.completed) { background: rgba(229, 57, 53, 0.08); }
+
+.todo-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.todo-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.todo-title { font-weight: 600; }
+
+.urgency-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.urgency-badge.urgency-low { background: rgba(76, 175, 80, 0.15); color: #2e7d32; }
+.urgency-badge.urgency-medium { background: rgba(240, 173, 78, 0.18); color: #b06d00; }
+.urgency-badge.urgency-high { background: rgba(229, 57, 53, 0.15); color: #c62828; }
 
 .todo-item .meta { font-size: 0.75rem; color: var(--muted); }
+.todo-item .meta .overdue-text { color: #e53935; font-weight: 600; }
 
+.todo-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .todo-item button { background: none; border: none; cursor: pointer; font-size: 0.9rem; }
 
 .widget {

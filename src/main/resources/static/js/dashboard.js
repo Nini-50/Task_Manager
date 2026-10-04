@@ -107,16 +107,41 @@ async function renderTodos() {
     todos.forEach(t => list.appendChild(todoItem(t)));
 }
 
+const URGENCY_LEVELS = {
+    low: { max: 2, label: 'Low', className: 'urgency-low', icon: '🟢' },
+    medium: { max: 3, label: 'Medium', className: 'urgency-medium', icon: '🟡' },
+    high: { max: 5, label: 'Urgent', className: 'urgency-high', icon: '🔴' },
+};
+
+function urgencyFor(priority) {
+    const p = Number(priority) || 0;
+    if (p <= URGENCY_LEVELS.low.max) return URGENCY_LEVELS.low;
+    if (p <= URGENCY_LEVELS.medium.max) return URGENCY_LEVELS.medium;
+    return URGENCY_LEVELS.high;
+}
+
 function todoItem(t) {
     const li = document.createElement('li');
-    li.className = 'todo-item' + (t.status === 'COMPLETED' ? ' completed' : '');
-    const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'No due date';
+    const urgency = urgencyFor(t.priority);
+    const isCompleted = t.status === 'COMPLETED';
+    const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+    const isOverdue = !!dueDate && !isCompleted && dueDate.getTime() < Date.now();
+    const due = dueDate ? dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No due date';
+
+    li.className = ['todo-item', urgency.className, isCompleted ? 'completed' : '', isOverdue ? 'overdue' : '']
+        .filter(Boolean).join(' ');
     li.innerHTML = `
-        <div>
-            <div>${escapeHtml(t.title)}</div>
-            <div class="meta">${t.course ? escapeHtml(t.course.name) + ' · ' : ''}${due}</div>
+        <div class="todo-main">
+            <div class="todo-title-row">
+                <span class="todo-title">${escapeHtml(t.title)}</span>
+                <span class="urgency-badge ${urgency.className}" title="${urgency.label} urgency">${urgency.icon} ${urgency.label}</span>
+            </div>
+            <div class="meta">
+                ${t.course ? escapeHtml(t.course.name) + ' · ' : ''}
+                <span class="due-date${isOverdue ? ' overdue-text' : ''}">${isOverdue ? '⚠️ Overdue: ' : '📅 '}${due}</span>
+            </div>
         </div>
-        <div>
+        <div class="todo-actions">
             <button data-action="complete" data-id="${t.id}" title="Mark complete">✓</button>
             <button data-action="delete" data-id="${t.id}" title="Delete">✕</button>
         </div>`;
@@ -129,9 +154,16 @@ async function onAddTodo(e) {
     e.preventDefault();
     const title = document.getElementById('todoTitle').value.trim();
     const priority = parseInt(document.getElementById('todoPriority').value, 10);
+    const dueDateValue = document.getElementById('todoDueDate').value;
     if (!title) return;
-    await api('/api/tasks', 'POST', { title, priority, type: 'TODO', status: 'PENDING' });
+    const payload = { title, priority, type: 'TODO', status: 'PENDING' };
+    if (dueDateValue) {
+        // Date-only input; treat the due date as end-of-day so same-day tasks aren't marked overdue early.
+        payload.dueDate = `${dueDateValue}T23:59:00`;
+    }
+    await api('/api/tasks', 'POST', payload);
     document.getElementById('todoTitle').value = '';
+    document.getElementById('todoDueDate').value = '';
     await renderTodos();
     await renderCalendar();
 }
