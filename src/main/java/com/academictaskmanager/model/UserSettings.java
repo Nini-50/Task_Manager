@@ -35,6 +35,9 @@ public class UserSettings {
     private boolean sportsWidgetEnabled = false;
     private String sportsTeam;
 
+    /** ESPN scoreboard path segment, e.g. "football/nfl" or "basketball/nba". */
+    private String sportsLeague = "football/nfl";
+
     private boolean todoWidgetEnabled = true;
     private boolean calendarWidgetEnabled = true;
 
@@ -73,6 +76,9 @@ public class UserSettings {
 
     public String getSportsTeam() { return sportsTeam; }
     public void setSportsTeam(String sportsTeam) { this.sportsTeam = sportsTeam; }
+
+    public String getSportsLeague() { return sportsLeague; }
+    public void setSportsLeague(String sportsLeague) { this.sportsLeague = sportsLeague; }
 
     public boolean isTodoWidgetEnabled() { return todoWidgetEnabled; }
     public void setTodoWidgetEnabled(boolean todoWidgetEnabled) { this.todoWidgetEnabled = todoWidgetEnabled; }

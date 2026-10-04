@@ -191,6 +191,23 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
     padding: 16px;
 }
 
+.widget h3 { margin: 0 0 8px; font-size: 1rem; }
+.widget-primary { font-size: 1.3rem; font-weight: 600; margin: 4px 0; }
+
+.sports-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sports-list li {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.85rem;
+}
+.sports-list li.favorite { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card-bg)); }
+.sports-list .matchup { font-weight: 600; }
+.sports-list .meta { font-size: 0.75rem; color: var(--muted); }
+
 .modal {
     position: fixed;
     inset: 0;
