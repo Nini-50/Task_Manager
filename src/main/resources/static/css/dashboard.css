@@ -245,6 +245,22 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
 .sports-list .matchup { font-weight: 600; }
 .sports-list .meta { font-size: 0.75rem; color: var(--muted); }
 
+.scoreboard { width: 100%; border-collapse: collapse; margin: 2px 0; }
+.scoreboard td { padding: 3px 0; font-size: 0.9rem; }
+.scoreboard .team-name { font-weight: 500; }
+.scoreboard .team-score { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; width: 2.5em; }
+.scoreboard tr.winner .team-name,
+.scoreboard tr.winner .team-score { color: var(--accent); font-weight: 800; }
+.scoreboard .away-tag,
+.scoreboard .home-tag {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
 .modal {
     position: fixed;
     inset: 0;

@@ -320,7 +320,7 @@ async function buildSportsWidget() {
         }
         const rows = games.map(g => `
             <li class="${g.favorite ? 'favorite' : ''}">
-                <span class="matchup">${escapeHtml(g.awayTeam)} ${g.awayScore ?? ''} @ ${escapeHtml(g.homeTeam)} ${g.homeScore ?? ''}</span>
+                ${scoreboardTable(g)}
                 <span class="meta">${escapeHtml(g.statusDetail || '')}</span>
             </li>`).join('');
         w.innerHTML = `<h3>🏈 Sports</h3><ul class="sports-list">${rows}</ul>`;
@@ -335,9 +335,31 @@ function sportsGameRow(g, label) {
     return `
         <li class="favorite">
             <span class="meta">${escapeHtml(label)}${dateStr ? ' · ' + dateStr : ''}</span>
-            <span class="matchup">${escapeHtml(g.awayTeam)} ${g.awayScore ?? ''} @ ${escapeHtml(g.homeTeam)} ${g.homeScore ?? ''}</span>
+            ${scoreboardTable(g)}
             <span class="meta">${escapeHtml(g.statusDetail || '')}</span>
         </li>`;
+}
+
+/**
+ * Renders a game's two teams as stacked rows with right-aligned scores (away team on top, home
+ * team on bottom, matching the familiar scoreboard layout) instead of a single run-on line like
+ * "Team A 35 @ Team B 14", which was easy to misread as to who scored what.
+ */
+function scoreboardTable(g) {
+    const hasScore = g.awayScore != null && g.homeScore != null;
+    const awayWins = hasScore && g.completed && Number(g.awayScore) > Number(g.homeScore);
+    const homeWins = hasScore && g.completed && Number(g.homeScore) > Number(g.awayScore);
+    return `
+        <table class="scoreboard">
+            <tr class="${awayWins ? 'winner' : ''}">
+                <td class="team-name">${escapeHtml(g.awayTeam)}<span class="away-tag">away</span></td>
+                <td class="team-score">${g.awayScore ?? '–'}</td>
+            </tr>
+            <tr class="${homeWins ? 'winner' : ''}">
+                <td class="team-name">${escapeHtml(g.homeTeam)}<span class="home-tag">home</span></td>
+                <td class="team-score">${g.homeScore ?? '–'}</td>
+            </tr>
+        </table>`;
 }
 
 /* ---------------- Canvas sync ---------------- */
