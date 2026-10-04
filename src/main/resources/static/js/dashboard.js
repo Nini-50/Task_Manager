@@ -1,5 +1,10 @@
 /* Dashboard front-end: talks to the Spring Boot REST API under /api/* */
 
+const THEME_KEYS = [
+    'red', 'orange', 'yellow', 'green', 'teal', 'light-blue',
+    'dark-blue', 'light-pink', 'hot-pink', 'lavender', 'purple', 'brown',
+];
+
 const state = {
     weekStart: startOfWeek(new Date()),
     settings: null,
@@ -11,7 +16,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
     await loadSettings();
     applyTheme();
-    renderWidgets();
+    await renderWidgets();
     await renderCalendar();
     await renderTodos();
     wireEvents();
@@ -25,6 +30,7 @@ function wireEvents() {
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
     document.getElementById('closeSettingsBtn').addEventListener('click', () => toggleModal('settingsModal', false));
     document.getElementById('settingsForm').addEventListener('submit', onSaveSettings);
+    document.getElementById('themeSwatches').addEventListener('click', onSwatchClick);
 
     document.getElementById('syncCanvasBtn').addEventListener('click', onSyncCanvas);
 
@@ -149,18 +155,35 @@ async function loadSettings() {
 
 function applyTheme() {
     const s = state.settings;
-    document.documentElement.style.setProperty('--theme-color', s.themeColor || '#4f46e5');
+    document.body.classList.remove(...THEME_KEYS.map(k => `theme-${k}`));
+    if (s.themeColor && THEME_KEYS.includes(s.themeColor)) {
+        document.body.classList.add(`theme-${s.themeColor}`);
+    }
     document.body.classList.toggle('theme-dark', s.themeMode === 'dark');
+}
+
+function selectSwatch(key) {
+    document.getElementById('themeColor').value = key;
+    document.querySelectorAll('#themeSwatches .swatch').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.theme === key);
+    });
+}
+
+function onSwatchClick(e) {
+    const btn = e.target.closest('.swatch');
+    if (!btn) return;
+    selectSwatch(btn.dataset.theme);
 }
 
 function openSettingsModal() {
     const s = state.settings;
     document.getElementById('displayName').value = s.displayName || '';
-    document.getElementById('themeColor').value = s.themeColor || '#4f46e5';
+    selectSwatch(THEME_KEYS.includes(s.themeColor) ? s.themeColor : THEME_KEYS[0]);
     document.getElementById('themeMode').value = s.themeMode || 'light';
     document.getElementById('weatherWidgetEnabled').checked = !!s.weatherWidgetEnabled;
     document.getElementById('weatherLocation').value = s.weatherLocation || '';
     document.getElementById('sportsWidgetEnabled').checked = !!s.sportsWidgetEnabled;
+    document.getElementById('sportsLeague').value = s.sportsLeague || 'football/nfl';
     document.getElementById('sportsTeam').value = s.sportsTeam || '';
     document.getElementById('canvasBaseUrl').value = s.canvasBaseUrl || '';
     document.getElementById('canvasApiToken').value = '';
@@ -176,6 +199,7 @@ async function onSaveSettings(e) {
     s.weatherWidgetEnabled = document.getElementById('weatherWidgetEnabled').checked;
     s.weatherLocation = document.getElementById('weatherLocation').value;
     s.sportsWidgetEnabled = document.getElementById('sportsWidgetEnabled').checked;
+    s.sportsLeague = document.getElementById('sportsLeague').value;
     s.sportsTeam = document.getElementById('sportsTeam').value;
     s.canvasBaseUrl = document.getElementById('canvasBaseUrl').value;
     const token = document.getElementById('canvasApiToken').value;
@@ -185,7 +209,7 @@ async function onSaveSettings(e) {
     }
     state.settings = await api('/api/settings', 'PUT', s);
     applyTheme();
-    renderWidgets();
+    await renderWidgets();
     toggleModal('settingsModal', false);
 }
 
@@ -193,26 +217,18 @@ function toggleModal(id, show) {
     document.getElementById(id).classList.toggle('hidden', !show);
 }
 
-/* ---------------- Optional widgets (weather/sports placeholders) ---------------- */
+/* ---------------- Optional widgets (live weather via Open-Meteo, live scores via ESPN) ---------------- */
 
-function renderWidgets() {
+async function renderWidgets() {
     const panel = document.getElementById('widgetPanel');
     panel.innerHTML = '';
     const s = state.settings;
 
     if (s.weatherWidgetEnabled) {
-        const w = document.createElement('div');
-        w.className = 'widget';
-        w.innerHTML = `<h3>🌤️ Weather</h3><p class="hint">${s.weatherLocation ? escapeHtml(s.weatherLocation) : 'Set a location in settings'}</p>
-            <p class="hint">Connect a weather API key to show live conditions.</p>`;
-        panel.appendChild(w);
+        panel.appendChild(await buildWeatherWidget());
     }
     if (s.sportsWidgetEnabled) {
-        const w = document.createElement('div');
-        w.className = 'widget';
-        w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">${s.sportsTeam ? escapeHtml(s.sportsTeam) : 'Pick a favorite team in settings'}</p>
-            <p class="hint">Connect a sports scores API key to show live scores.</p>`;
-        panel.appendChild(w);
+        panel.appendChild(await buildSportsWidget());
     }
     if (!s.weatherWidgetEnabled && !s.sportsWidgetEnabled) {
         const w = document.createElement('div');
@@ -220,6 +236,48 @@ function renderWidgets() {
         w.innerHTML = `<h3>✨ Customize</h3><p class="hint">Enable weather, sports, and more from the ⚙️ settings menu.</p>`;
         panel.appendChild(w);
     }
+}
+
+async function buildWeatherWidget() {
+    const w = document.createElement('div');
+    w.className = 'widget';
+    w.innerHTML = `<h3>🌤️ Weather</h3><p class="hint">Loading…</p>`;
+    try {
+        const data = await api('/api/widgets/weather');
+        if (data.status !== 'ok') throw new Error(data.message || 'Weather unavailable');
+        const wx = data.weather;
+        w.innerHTML = `
+            <h3>${wx.emoji} Weather</h3>
+            <p class="widget-primary">${Math.round(wx.temperatureF)}°F — ${escapeHtml(wx.condition)}</p>
+            <p class="hint">${escapeHtml(wx.location)} · wind ${Math.round(wx.windMph)} mph</p>`;
+    } catch (err) {
+        w.innerHTML = `<h3>🌤️ Weather</h3><p class="hint">${escapeHtml(err.message)}</p>`;
+    }
+    return w;
+}
+
+async function buildSportsWidget() {
+    const w = document.createElement('div');
+    w.className = 'widget';
+    w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">Loading…</p>`;
+    try {
+        const data = await api('/api/widgets/sports');
+        if (data.status !== 'ok') throw new Error(data.message || 'Scores unavailable');
+        const games = data.games || [];
+        if (games.length === 0) {
+            w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">No games found right now.</p>`;
+            return w;
+        }
+        const rows = games.map(g => `
+            <li class="${g.favorite ? 'favorite' : ''}">
+                <span class="matchup">${escapeHtml(g.awayTeam)} ${g.awayScore ?? ''} @ ${escapeHtml(g.homeTeam)} ${g.homeScore ?? ''}</span>
+                <span class="meta">${escapeHtml(g.statusDetail || '')}</span>
+            </li>`).join('');
+        w.innerHTML = `<h3>🏈 Sports</h3><ul class="sports-list">${rows}</ul>`;
+    } catch (err) {
+        w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">${escapeHtml(err.message)}</p>`;
+    }
+    return w;
 }
 
 /* ---------------- Canvas sync ---------------- */

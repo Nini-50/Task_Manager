@@ -11,7 +11,7 @@ Canvas LMS sync and syllabus-to-calendar import.
 - **To-Do lists** — add, prioritize, complete, and delete personal tasks.
 - **Canvas LMS sync** — connect your school's Canvas instance with a personal access token to pull in courses and assignment due dates (`/api/canvas/sync`).
 - **Syllabus upload** — upload a PDF/text syllabus; the app scans it for dated items (due dates, exams) and lets you review/confirm before adding them to your calendar.
-- **Customization** — theme color/mode, and optional widgets (weather, sports — wired up as placeholders ready for an API key) via the ⚙️ settings panel.
+- **Customization** — 12-color theme palette (light/dark) plus optional widgets (live weather via Open-Meteo, live sports scores via ESPN) via the ⚙️ settings panel — no API keys required for either.
 
 ## Tech stack
 
@@ -42,6 +42,15 @@ for inspecting data during development (JDBC URL:
 2. In the app, open **⚙️ Customize** and fill in your Canvas base URL (e.g. `https://yourschool.instructure.com`) and the token.
 3. Click **Sync Canvas** on the dashboard to pull in your active courses and assignments.
 
+## Weather and sports widgets
+
+Both widgets use free, public data sources — **no signup or API key is needed**:
+
+- **Weather** — [Open-Meteo](https://open-meteo.com/) (weather.com/IBM Weather Company has no perpetual free tier, so this is the free alternative). Enter any city/region in **⚙️ Customize → Weather location** (e.g. `Boston, MA`) and the dashboard shows current temperature, conditions, and wind.
+- **Sports** — ESPN's public scoreboard endpoint. Pick a league from the dropdown (NFL, NBA, MLB, NHL, college football/basketball, Premier League) and, optionally, a favorite team name/abbreviation to highlight its game(s) on the scoreboard.
+
+Note: ESPN's endpoint is unofficial/undocumented (no stability guarantee), which is a fine trade-off for a student hobby project but worth knowing if scores ever stop loading.
+
 ## Project layout
 
 ```
@@ -57,8 +66,6 @@ src/main/resources/
 
 ## Roadmap ideas
 
-- Multi-user accounts/authentication
-- Live weather and sports score widgets (wire up a provider API key)
 - Smarter syllabus parsing (NLP-based date/assignment extraction)
 - Push/email reminders for upcoming due dates
 - Mobile-friendly layout
