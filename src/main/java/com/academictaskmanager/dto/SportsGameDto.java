@@ -10,6 +10,11 @@ public class SportsGameDto {
     private String awayTeam;
     private String awayScore;
     private boolean favorite;
+    /** ISO-8601 kickoff/tip-off time; only populated for team-schedule lookups (previous/next game). */
+    private String date;
+
+    public String getDate() { return date; }
+    public void setDate(String date) { this.date = date; }
 
     public String getShortName() { return shortName; }
     public void setShortName(String shortName) { this.shortName = shortName; }

@@ -298,6 +298,21 @@ async function buildSportsWidget() {
     try {
         const data = await api('/api/widgets/sports');
         if (data.status !== 'ok') throw new Error(data.message || 'Scores unavailable');
+
+        // When a favorite team is set and ESPN recognizes it, the API returns the team's
+        // previous and next games directly instead of a generic league scoreboard.
+        if ('previousGame' in data || 'nextGame' in data) {
+            const rows = [];
+            if (data.previousGame) rows.push(sportsGameRow(data.previousGame, 'Previous game'));
+            if (data.nextGame) rows.push(sportsGameRow(data.nextGame, 'Next game'));
+            if (rows.length === 0) {
+                w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">No schedule found for your favorite team yet.</p>`;
+                return w;
+            }
+            w.innerHTML = `<h3>🏈 Sports</h3><ul class="sports-list">${rows.join('')}</ul>`;
+            return w;
+        }
+
         const games = data.games || [];
         if (games.length === 0) {
             w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">No games found right now.</p>`;
@@ -313,6 +328,16 @@ async function buildSportsWidget() {
         w.innerHTML = `<h3>🏈 Sports</h3><p class="hint">${escapeHtml(err.message)}</p>`;
     }
     return w;
+}
+
+function sportsGameRow(g, label) {
+    const dateStr = g.date ? new Date(g.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+    return `
+        <li class="favorite">
+            <span class="meta">${escapeHtml(label)}${dateStr ? ' · ' + dateStr : ''}</span>
+            <span class="matchup">${escapeHtml(g.awayTeam)} ${g.awayScore ?? ''} @ ${escapeHtml(g.homeTeam)} ${g.homeScore ?? ''}</span>
+            <span class="meta">${escapeHtml(g.statusDetail || '')}</span>
+        </li>`;
 }
 
 /* ---------------- Canvas sync ---------------- */

@@ -1,11 +1,13 @@
 package com.academictaskmanager.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /** A single competitor (home or away) within an ESPN scoreboard competition. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EspnCompetitorDto {
     private String homeAway;
+    @JsonDeserialize(using = FlexibleScoreDeserializer.class)
     private String score;
     private EspnTeamDto team;
 

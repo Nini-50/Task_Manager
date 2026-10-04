@@ -59,8 +59,20 @@ public class WidgetDataController {
     public ResponseEntity<Map<String, Object>> sports(Authentication authentication) {
         UserSettings settings = settingsService.getSettings(currentUser(authentication));
         try {
+            String favoriteTeam = settings.getSportsTeam();
+            if (favoriteTeam != null && !favoriteTeam.isBlank()) {
+                com.academictaskmanager.dto.TeamScheduleDto schedule =
+                        sportsService.getTeamSchedule(settings.getSportsLeague(), favoriteTeam);
+                if (schedule != null) {
+                    Map<String, Object> body = new java.util.HashMap<>();
+                    body.put("status", "ok");
+                    body.put("previousGame", schedule.getPreviousGame());
+                    body.put("nextGame", schedule.getNextGame());
+                    return ResponseEntity.ok(body);
+                }
+            }
             List<com.academictaskmanager.dto.SportsGameDto> games =
-                    sportsService.getScoreboard(settings.getSportsLeague(), settings.getSportsTeam());
+                    sportsService.getScoreboard(settings.getSportsLeague(), favoriteTeam);
             return ResponseEntity.ok(Map.of("status", "ok", "games", games));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
