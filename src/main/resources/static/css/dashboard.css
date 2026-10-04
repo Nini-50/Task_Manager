@@ -1,0 +1,172 @@
+:root {
+    --theme-color: #4f46e5;
+    --bg: #f5f6fb;
+    --card-bg: #ffffff;
+    --text: #1f2330;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+body.theme-dark {
+    --bg: #14161f;
+    --card-bg: #1e2130;
+    --text: #f1f2f6;
+    --muted: #9ca3af;
+    --border: #2d3142;
+}
+
+.app-shell { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.topbar h1 { font-size: 1.5rem; margin: 0; }
+
+.topbar-actions { display: flex; gap: 8px; }
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--theme-color);
+    color: white;
+    border-color: var(--theme-color);
+}
+
+.btn-outline:hover { border-color: var(--theme-color); }
+
+.btn-icon { padding: 8px 10px; }
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.widgets-panel {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.calendar-nav { display: flex; align-items: center; gap: 8px; }
+.calendar-nav button { border: none; background: none; font-size: 1.2rem; cursor: pointer; color: var(--muted); }
+
+.calendar-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-day {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 110px;
+    font-size: 0.8rem;
+}
+
+.calendar-day .day-label { font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+
+.calendar-task {
+    background: var(--theme-color);
+    color: white;
+    border-radius: 6px;
+    padding: 2px 6px;
+    margin-bottom: 4px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.todo-form { display: flex; gap: 8px; margin-bottom: 12px; }
+.todo-form input[type="text"] { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+.todo-form select { padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+
+.todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.todo-item.completed { opacity: 0.5; text-decoration: line-through; }
+
+.todo-item .meta { font-size: 0.75rem; color: var(--muted); }
+
+.todo-item button { background: none; border: none; cursor: pointer; font-size: 0.9rem; }
+
+.widget {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.hidden { display: none; }
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.modal-content label { display: block; margin-bottom: 12px; font-size: 0.85rem; }
+.modal-content input, .modal-content select { width: 100%; padding: 8px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); }
+.modal-content fieldset { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+.hint { color: var(--muted); font-size: 0.85rem; }
