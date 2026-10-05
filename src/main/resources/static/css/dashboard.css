@@ -430,3 +430,48 @@ a.game-link:hover { background: color-mix(in srgb, var(--accent) 16%, transparen
 .class-overview-fields { display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
 .class-overview-fields label { font-size: 0.85rem; }
 .class-overview-fields input { width: 100%; padding: 8px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); }
+
+/* ---------------- Classes: Notes tab ---------------- */
+
+.btn-small { padding: 4px 10px; font-size: 0.8rem; }
+
+.note-tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.note-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.note-tab {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.note-tab:hover { border-color: var(--accent); color: var(--text); }
+.note-tab.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card-bg)); color: var(--accent); font-weight: 600; }
+
+.note-editor { display: flex; flex-direction: column; gap: 10px; }
+.note-title-input {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.note-content-input {
+    min-height: 220px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font: inherit;
+    resize: vertical;
+}

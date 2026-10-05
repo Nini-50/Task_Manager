@@ -13,6 +13,8 @@ const state = {
     allTasks: [],
     selectedCourseId: null,
     classInnerTab: 'overview',
+    notes: [],
+    selectedNoteId: null,
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -134,7 +136,7 @@ function urgencyFor(priority) {
     return URGENCY_LEVELS.high;
 }
 
-function todoItem(t) {
+function buildTaskListItem(t, { onComplete, onDelete }) {
     const li = document.createElement('li');
     const urgency = urgencyFor(t.priority);
     const isCompleted = t.status === 'COMPLETED';
@@ -156,13 +158,21 @@ function todoItem(t) {
             </div>
         </div>
         <div class="todo-actions">
-            <button data-action="complete" data-id="${t.id}" title="Mark complete">✓</button>
-            <button data-action="delete" data-id="${t.id}" title="Delete">✕</button>
+            <button data-action="complete" title="Mark complete">✓</button>
+            <button data-action="delete" title="Delete">✕</button>
         </div>`;
-    li.querySelector('[data-action="complete"]').addEventListener('click', () => completeTodo(t.id));
-    li.querySelector('[data-action="delete"]').addEventListener('click', () => deleteTodo(t.id));
+    li.querySelector('[data-action="complete"]').addEventListener('click', onComplete);
+    li.querySelector('[data-action="delete"]').addEventListener('click', onDelete);
     return li;
 }
+
+function todoItem(t) {
+    return buildTaskListItem(t, {
+        onComplete: () => completeTodo(t.id),
+        onDelete: () => deleteTodo(t.id),
+    });
+}
+
 
 async function onAddTodo(e) {
     e.preventDefault();
@@ -195,7 +205,8 @@ async function deleteTodo(id) {
 
 /* ---------------- Classes ---------------- */
 
-const CLASS_INNER_TABS = ['overview', 'tasks', 'syllabus'];
+const CLASS_INNER_TABS = ['overview', 'tasks', 'syllabus', 'notes'];
+const CLASS_INNER_TAB_LABELS = { overview: 'Overview', tasks: 'Tasks', syllabus: 'Syllabus', notes: 'Notes' };
 
 function switchView(view) {
     document.querySelectorAll('.view-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
@@ -236,6 +247,7 @@ function renderClassList() {
         btn.addEventListener('click', () => {
             state.selectedCourseId = c.id;
             state.classInnerTab = 'overview';
+            state.selectedNoteId = null;
             renderClassList();
             renderClassDetail();
         });
@@ -254,7 +266,7 @@ function renderClassDetail() {
 
     const tabsHtml = CLASS_INNER_TABS.map(tab => `
         <button type="button" class="inner-tab${tab === state.classInnerTab ? ' active' : ''}" data-tab="${tab}">
-            ${tab === 'overview' ? 'Overview' : tab === 'tasks' ? 'Tasks' : 'Syllabus'}
+            ${CLASS_INNER_TAB_LABELS[tab]}
         </button>`).join('');
 
     detail.innerHTML = `
@@ -278,8 +290,10 @@ function renderClassDetail() {
         renderClassOverview(content, course);
     } else if (state.classInnerTab === 'tasks') {
         renderClassTasks(content, course);
-    } else {
+    } else if (state.classInnerTab === 'syllabus') {
         renderClassSyllabus(content, course);
+    } else {
+        renderClassNotes(content, course);
     }
 }
 
@@ -303,15 +317,61 @@ function renderClassTasks(content, course) {
     const tasks = state.allTasks
         .filter(t => t.course && t.course.id === course.id)
         .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
-    if (tasks.length === 0) {
-        content.innerHTML = `<p class="hint">No tasks for this class yet. Add one from the Dashboard to-do list and assign it to this course.</p>`;
-        return;
+
+    content.innerHTML = `
+        <form id="classTaskForm" class="todo-form">
+            <input type="text" id="classTaskTitle" placeholder="Add a task for this class..." required>
+            <input type="date" id="classTaskDueDate" aria-label="Due date">
+            <select id="classTaskPriority" aria-label="Urgency">
+                <option value="1">Low</option>
+                <option value="3" selected>Medium</option>
+                <option value="5">Urgent</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+        ${tasks.length === 0
+            ? `<p class="hint">No tasks for this class yet. Add one above.</p>`
+            : `<ul class="todo-list" id="classTaskList"></ul>`}`;
+
+    if (tasks.length > 0) {
+        const list = content.querySelector('#classTaskList');
+        tasks.forEach(t => list.appendChild(classTaskItem(t, course, content)));
     }
-    const list = document.createElement('ul');
-    list.className = 'todo-list';
-    tasks.forEach(t => list.appendChild(todoItem(t)));
-    content.innerHTML = '';
-    content.appendChild(list);
+
+    content.querySelector('#classTaskForm').addEventListener('submit', (e) => onAddClassTask(e, course, content));
+}
+
+function classTaskItem(t, course, content) {
+    return buildTaskListItem(t, {
+        onComplete: async () => {
+            await api(`/api/tasks/${t.id}/complete`, 'POST');
+            state.allTasks = await api('/api/tasks');
+            renderClassTasks(content, course);
+        },
+        onDelete: async () => {
+            await api(`/api/tasks/${t.id}`, 'DELETE');
+            state.allTasks = await api('/api/tasks');
+            renderClassTasks(content, course);
+        },
+    });
+}
+
+async function onAddClassTask(e, course, content) {
+    e.preventDefault();
+    const title = content.querySelector('#classTaskTitle').value.trim();
+    const priority = parseInt(content.querySelector('#classTaskPriority').value, 10);
+    const dueDateValue = content.querySelector('#classTaskDueDate').value;
+    if (!title) return;
+    const payload = { title, priority, type: 'TODO', status: 'PENDING', course: { id: course.id } };
+    if (dueDateValue) {
+        // Date-only input; treat the due date as end-of-day so same-day tasks aren't marked overdue early.
+        payload.dueDate = `${dueDateValue}T23:59:00`;
+    }
+    await api('/api/tasks', 'POST', payload);
+    state.allTasks = await api('/api/tasks');
+    renderClassTasks(content, course);
+    await renderTodos();
+    await renderCalendar();
 }
 
 function renderClassSyllabus(content, course) {
@@ -327,6 +387,80 @@ function renderClassSyllabus(content, course) {
     tasks.forEach(t => list.appendChild(todoItem(t)));
     content.innerHTML = '';
     content.appendChild(list);
+}
+
+async function renderClassNotes(content, course) {
+    content.innerHTML = `<p class="hint">Loading notes…</p>`;
+    state.notes = await api(`/api/notes?courseId=${course.id}`);
+    if (state.selectedNoteId && !state.notes.some(n => n.id === state.selectedNoteId)) {
+        state.selectedNoteId = null;
+    }
+    if (!state.selectedNoteId && state.notes.length > 0) {
+        state.selectedNoteId = state.notes[0].id;
+    }
+    renderNotesBody(content, course);
+}
+
+function renderNotesBody(content, course) {
+    const notes = state.notes;
+    const tabsHtml = notes.map(n => `
+        <button type="button" class="note-tab${n.id === state.selectedNoteId ? ' active' : ''}" data-id="${n.id}">
+            ${escapeHtml(n.title)}
+        </button>`).join('');
+    const note = notes.find(n => n.id === state.selectedNoteId);
+
+    content.innerHTML = `
+        <div class="note-tabs-row">
+            <div class="note-tabs">${tabsHtml}</div>
+            <button type="button" class="btn btn-outline btn-small" id="addNoteBtn">+ New note</button>
+        </div>
+        ${notes.length === 0
+            ? `<p class="hint">No notes yet for this class. Add one to start taking notes.</p>`
+            : `<div class="note-editor">
+                   <input type="text" id="noteTitleInput" class="note-title-input" placeholder="Note title" value="${escapeHtml(note.title)}">
+                   <textarea id="noteContentInput" class="note-content-input" placeholder="Write your notes here...">${escapeHtml(note.content || '')}</textarea>
+                   <div class="class-detail-actions">
+                       <button type="button" class="btn btn-primary" id="saveNoteBtn">Save note</button>
+                       <button type="button" class="btn btn-outline" id="deleteNoteBtn">Delete note</button>
+                   </div>
+               </div>`}`;
+
+    content.querySelectorAll('.note-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.selectedNoteId = Number(btn.dataset.id);
+            renderNotesBody(content, course);
+        });
+    });
+    content.querySelector('#addNoteBtn').addEventListener('click', () => onAddNote(course, content));
+
+    if (note) {
+        content.querySelector('#saveNoteBtn').addEventListener('click', () => onSaveNote(note, course, content));
+        content.querySelector('#deleteNoteBtn').addEventListener('click', () => onDeleteNote(note, course, content));
+    }
+}
+
+async function onAddNote(course, content) {
+    const created = await api('/api/notes', 'POST', { title: 'Untitled note', content: '', course: { id: course.id } });
+    state.notes.push(created);
+    state.selectedNoteId = created.id;
+    renderNotesBody(content, course);
+}
+
+async function onSaveNote(note, course, content) {
+    const title = content.querySelector('#noteTitleInput').value.trim() || 'Untitled note';
+    const body = content.querySelector('#noteContentInput').value;
+    const updated = await api(`/api/notes/${note.id}`, 'PUT', { title, content: body, course: { id: course.id } });
+    const idx = state.notes.findIndex(n => n.id === note.id);
+    if (idx !== -1) state.notes[idx] = updated;
+    renderNotesBody(content, course);
+}
+
+async function onDeleteNote(note, course, content) {
+    if (!confirm(`Delete note "${note.title}"?`)) return;
+    await api(`/api/notes/${note.id}`, 'DELETE');
+    state.notes = state.notes.filter(n => n.id !== note.id);
+    state.selectedNoteId = state.notes.length > 0 ? state.notes[0].id : null;
+    renderNotesBody(content, course);
 }
 
 function openClassModal(course) {
