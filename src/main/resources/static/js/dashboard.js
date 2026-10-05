@@ -35,6 +35,7 @@ function wireEvents() {
 
     document.getElementById('addEventBtn').addEventListener('click', openEventModal);
     document.getElementById('closeEventBtn').addEventListener('click', () => toggleModal('eventModal', false));
+    document.getElementById('closeDetailsBtn').addEventListener('click', () => toggleModal('detailsModal', false));
     document.getElementById('eventForm').addEventListener('submit', onSaveEvent);
 
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
@@ -124,9 +125,9 @@ async function renderCalendar() {
             const tag = document.createElement('div');
             tag.className = 'calendar-event';
             const timeLabel = formatTime(ev.startDateTime) + (ev.endDateTime ? ` – ${formatTime(ev.endDateTime)}` : '');
-            tag.title = `${ev.title} — ${timeLabel}${ev.location ? ' @ ' + ev.location : ''} (click to delete)`;
+            tag.title = `${ev.title} — ${timeLabel}${ev.location ? ' @ ' + ev.location : ''} (click for details)`;
             tag.textContent = `🕒 ${timeLabel} ${ev.title}`;
-            tag.addEventListener('click', () => onDeleteEvent(ev));
+            tag.addEventListener('click', () => openEventDetails(ev));
             col.appendChild(tag);
         });
         dayTasks.forEach(t => {
@@ -135,8 +136,9 @@ async function renderCalendar() {
             const isOverdue = !isCompleted && new Date(t.dueDate).getTime() < Date.now();
             const tag = document.createElement('div');
             tag.className = ['calendar-task', urgency.className, isOverdue ? 'overdue' : ''].filter(Boolean).join(' ');
-            tag.title = `${t.title} — ${urgency.label} urgency${isOverdue ? ' (overdue)' : ''}`;
+            tag.title = `${t.title} — ${urgency.label} urgency${isOverdue ? ' (overdue)' : ''} (click for details)`;
             tag.textContent = `${urgency.icon} ${t.title}`;
+            tag.addEventListener('click', () => openTaskDetails(t));
             col.appendChild(tag);
         });
         body.appendChild(col);
@@ -180,10 +182,68 @@ async function onSaveEvent(e) {
     await renderCalendar();
 }
 
-async function onDeleteEvent(ev) {
-    if (!confirm(`Delete "${ev.title}"?`)) return;
-    await api(`/api/events/${ev.id}`, 'DELETE');
-    await renderCalendar();
+function formatDateTime(dateStr) {
+    return new Date(dateStr).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function openEventDetails(ev) {
+    const timeLabel = formatTime(ev.startDateTime) + (ev.endDateTime ? ` – ${formatTime(ev.endDateTime)}` : '');
+    document.getElementById('detailsTitle').textContent = ev.title;
+    document.getElementById('detailsBody').innerHTML = `
+        <dl>
+            <dt>When</dt>
+            <dd>${escapeHtml(formatDateTime(ev.startDateTime))} · ${escapeHtml(timeLabel)}</dd>
+            ${ev.location ? `<dt>Location</dt><dd>${escapeHtml(ev.location)}</dd>` : ''}
+            ${ev.course ? `<dt>Class</dt><dd>${escapeHtml(ev.course.name)}</dd>` : ''}
+            ${ev.description ? `<dt>Description</dt><dd>${escapeHtml(ev.description)}</dd>` : ''}
+        </dl>`;
+    document.getElementById('detailsCompleteBtn').classList.add('hidden');
+    document.getElementById('detailsDeleteBtn').onclick = async () => {
+        if (!confirm(`Delete "${ev.title}"?`)) return;
+        await api(`/api/events/${ev.id}`, 'DELETE');
+        toggleModal('detailsModal', false);
+        await renderCalendar();
+    };
+    toggleModal('detailsModal', true);
+}
+
+function openTaskDetails(t) {
+    const urgency = urgencyFor(t.priority);
+    const isCompleted = t.status === 'COMPLETED';
+    const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+    const isOverdue = !!dueDate && !isCompleted && dueDate.getTime() < Date.now();
+    const due = dueDate
+        ? dueDate.toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+        : 'No due date';
+    document.getElementById('detailsTitle').textContent = t.title;
+    document.getElementById('detailsBody').innerHTML = `
+        <dl>
+            <dt>Urgency</dt>
+            <dd>${urgency.icon} ${urgency.label}</dd>
+            <dt>Due</dt>
+            <dd class="${isOverdue ? 'overdue-text' : ''}">${isOverdue ? '⚠️ Overdue: ' : '📅 '}${escapeHtml(due)}</dd>
+            <dt>Status</dt>
+            <dd>${isCompleted ? '✅ Completed' : '⏳ Pending'}</dd>
+            ${t.course ? `<dt>Class</dt><dd>${escapeHtml(t.course.name)}</dd>` : ''}
+            ${t.description ? `<dt>Description</dt><dd>${escapeHtml(t.description)}</dd>` : ''}
+        </dl>`;
+    const completeBtn = document.getElementById('detailsCompleteBtn');
+    completeBtn.classList.toggle('hidden', isCompleted);
+    completeBtn.textContent = 'Mark complete';
+    completeBtn.onclick = async () => {
+        await api(`/api/tasks/${t.id}/complete`, 'POST');
+        toggleModal('detailsModal', false);
+        await renderTodos();
+        await renderCalendar();
+    };
+    document.getElementById('detailsDeleteBtn').onclick = async () => {
+        if (!confirm(`Delete "${t.title}"?`)) return;
+        await api(`/api/tasks/${t.id}`, 'DELETE');
+        toggleModal('detailsModal', false);
+        await renderTodos();
+        await renderCalendar();
+    };
+    toggleModal('detailsModal', true);
 }
 
 /* ---------------- To-dos ---------------- */

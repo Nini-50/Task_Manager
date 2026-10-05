@@ -103,7 +103,20 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
 
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 
+.btn-danger {
+    background: #e53935;
+    color: #ffffff;
+    border-color: #e53935;
+}
+
+.btn-danger:hover { background: #c62828; border-color: #c62828; }
+
 .btn-icon { padding: 8px 10px; }
+
+.details-body { margin-bottom: 16px; font-size: 0.9rem; line-height: 1.5; }
+.details-body dt { font-weight: 600; color: var(--muted); margin-top: 10px; }
+.details-body dt:first-child { margin-top: 0; }
+.details-body dd { margin: 2px 0 0; }
 
 .dashboard-grid {
     display: grid;
