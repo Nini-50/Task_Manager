@@ -108,11 +108,21 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
 .dashboard-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
+    align-items: stretch;
     gap: 20px;
 }
 
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+}
+
 .widgets-panel {
-    grid-column: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 16px;

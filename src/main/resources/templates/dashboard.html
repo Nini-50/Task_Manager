@@ -43,24 +43,26 @@
             <div id="calendarBody" class="calendar-body"></div>
         </section>
 
-        <section class="card todo-card">
-            <div class="card-header">
-                <h2>To-Do List</h2>
-            </div>
-            <form id="todoForm" class="todo-form">
-                <input type="text" id="todoTitle" placeholder="Add a task..." required>
-                <input type="date" id="todoDueDate" aria-label="Due date">
-                <select id="todoPriority" aria-label="Urgency">
-                    <option value="1">Low</option>
-                    <option value="3" selected>Medium</option>
-                    <option value="5">Urgent</option>
-                </select>
-                <button type="submit" class="btn btn-primary">Add</button>
-            </form>
-            <ul id="todoList" class="todo-list"></ul>
-        </section>
+        <div class="right-column">
+            <section class="card todo-card">
+                <div class="card-header">
+                    <h2>To-Do List</h2>
+                </div>
+                <form id="todoForm" class="todo-form">
+                    <input type="text" id="todoTitle" placeholder="Add a task..." required>
+                    <input type="date" id="todoDueDate" aria-label="Due date">
+                    <select id="todoPriority" aria-label="Urgency">
+                        <option value="1">Low</option>
+                        <option value="3" selected>Medium</option>
+                        <option value="5">Urgent</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </form>
+                <ul id="todoList" class="todo-list"></ul>
+            </section>
 
-        <aside id="widgetPanel" class="widgets-panel"></aside>
+            <aside id="widgetPanel" class="widgets-panel"></aside>
+        </div>
     </main>
 
     <main id="classesView" class="classes-layout hidden">
