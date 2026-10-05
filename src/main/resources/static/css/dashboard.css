@@ -159,7 +159,7 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
 .calendar-body {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: minmax(84px, auto);
+    grid-auto-rows: 84px;
     gap: 8px;
 }
 
@@ -167,7 +167,8 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px;
-    min-height: 84px;
+    height: 84px;
+    overflow: hidden;
     font-size: 0.8rem;
 }
 
