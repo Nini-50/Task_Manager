@@ -24,7 +24,12 @@
     </header>
 
 
-    <main class="dashboard-grid">
+    <nav class="view-tabs">
+        <button type="button" class="view-tab active" data-view="dashboard">🏠 Dashboard</button>
+        <button type="button" class="view-tab" data-view="classes">🎓 Classes</button>
+    </nav>
+
+    <main id="dashboardView" class="dashboard-grid">
         <section class="card calendar-card">
             <div class="card-header">
                 <h2>Calendar</h2>
@@ -55,6 +60,20 @@
         </section>
 
         <aside id="widgetPanel" class="widgets-panel"></aside>
+    </main>
+
+    <main id="classesView" class="classes-layout hidden">
+        <section class="card class-list-card">
+            <div class="card-header">
+                <h2>Classes</h2>
+                <button id="addClassBtn" class="btn btn-primary" type="button">+ Add Class</button>
+            </div>
+            <ul id="classList" class="class-list"></ul>
+        </section>
+
+        <section id="classDetail" class="card class-detail">
+            <p class="hint">Select a class on the left, or add a new one, to see its details.</p>
+        </section>
     </main>
 </div>
 
@@ -116,6 +135,32 @@
             </fieldset>
             <div class="modal-actions">
                 <button type="button" id="closeSettingsBtn" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add/edit class modal -->
+<div id="classModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="classModalTitle">Add Class</h2>
+        <form id="classForm">
+            <input type="hidden" id="classId">
+            <label>Class name
+                <input type="text" id="className" required placeholder="Intro to Computer Science">
+            </label>
+            <label>Course code
+                <input type="text" id="classCode" placeholder="CS 101">
+            </label>
+            <label>Instructor
+                <input type="text" id="classInstructor" placeholder="Dr. Smith">
+            </label>
+            <label>Color
+                <input type="color" id="classColor" value="#4f46e5">
+            </label>
+            <div class="modal-actions">
+                <button type="button" id="closeClassBtn" class="btn btn-outline">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </form>

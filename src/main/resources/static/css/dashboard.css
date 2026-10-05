@@ -334,3 +334,99 @@ a.game-link:hover { background: color-mix(in srgb, var(--accent) 16%, transparen
 .swatch-lavender { background: #a78bfa; }
 .swatch-purple { background: #9333ea; }
 .swatch-brown { background: #92400e; }
+
+/* ---------------- Top-level view tabs (Dashboard / Classes) ---------------- */
+.view-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.view-tab {
+    padding: 10px 18px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+}
+
+.view-tab:hover { color: var(--text); }
+.view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.hidden { display: none !important; }
+
+/* ---------------- Classes view ---------------- */
+.classes-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.class-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.class-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+}
+
+.class-list-item:hover { border-color: var(--accent); }
+.class-list-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card-bg)); }
+
+.class-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.class-list-item .class-name-col { display: flex; flex-direction: column; min-width: 0; }
+.class-list-item .class-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.class-list-item .class-code { font-size: 0.75rem; color: var(--muted); }
+
+.class-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.class-detail-header .class-color-dot { width: 18px; height: 18px; }
+.class-detail-header h2 { margin: 0; }
+.class-detail-meta { color: var(--muted); font-size: 0.85rem; margin: 4px 0 16px; }
+
+.inner-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.inner-tab {
+    padding: 8px 14px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.inner-tab:hover { color: var(--text); }
+.inner-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.class-detail-actions { display: flex; gap: 8px; margin-top: 16px; }
+.class-overview-fields { display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
+.class-overview-fields label { font-size: 0.85rem; }
+.class-overview-fields input { width: 100%; padding: 8px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border); }

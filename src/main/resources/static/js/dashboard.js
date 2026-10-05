@@ -9,6 +9,10 @@ const state = {
     weekStart: startOfWeek(new Date()),
     settings: null,
     syllabusCandidates: [],
+    courses: [],
+    allTasks: [],
+    selectedCourseId: null,
+    classInnerTab: 'overview',
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -38,6 +42,13 @@ function wireEvents() {
     document.getElementById('closeSyllabusBtn').addEventListener('click', () => toggleModal('syllabusModal', false));
     document.getElementById('previewSyllabusBtn').addEventListener('click', onPreviewSyllabus);
     document.getElementById('confirmSyllabusBtn').addEventListener('click', onConfirmSyllabus);
+
+    document.querySelectorAll('.view-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+    document.getElementById('addClassBtn').addEventListener('click', () => openClassModal(null));
+    document.getElementById('closeClassBtn').addEventListener('click', () => toggleModal('classModal', false));
+    document.getElementById('classForm').addEventListener('submit', onSaveClass);
 }
 
 /* ---------------- Calendar ---------------- */
@@ -180,6 +191,176 @@ async function deleteTodo(id) {
     await api(`/api/tasks/${id}`, 'DELETE');
     await renderTodos();
     await renderCalendar();
+}
+
+/* ---------------- Classes ---------------- */
+
+const CLASS_INNER_TABS = ['overview', 'tasks', 'syllabus'];
+
+function switchView(view) {
+    document.querySelectorAll('.view-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+    document.getElementById('dashboardView').classList.toggle('hidden', view !== 'dashboard');
+    document.getElementById('classesView').classList.toggle('hidden', view !== 'classes');
+    if (view === 'classes') {
+        loadClassesView();
+    }
+}
+
+async function loadClassesView() {
+    [state.courses, state.allTasks] = await Promise.all([api('/api/courses'), api('/api/tasks')]);
+    if (state.selectedCourseId && !state.courses.some(c => c.id === state.selectedCourseId)) {
+        state.selectedCourseId = null;
+    }
+    renderClassList();
+    renderClassDetail();
+}
+
+function renderClassList() {
+    const list = document.getElementById('classList');
+    list.innerHTML = '';
+    if (state.courses.length === 0) {
+        list.innerHTML = `<li class="hint">No classes yet. Add one to get started.</li>`;
+        return;
+    }
+    state.courses.forEach(c => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `class-list-item${c.id === state.selectedCourseId ? ' active' : ''}`;
+        btn.innerHTML = `
+            <span class="class-color-dot" style="background:${escapeHtml(c.colorHex || '#4f46e5')}"></span>
+            <span class="class-name-col">
+                <span class="class-name">${escapeHtml(c.name)}</span>
+                <span class="class-code">${escapeHtml(c.code || '')}</span>
+            </span>`;
+        btn.addEventListener('click', () => {
+            state.selectedCourseId = c.id;
+            state.classInnerTab = 'overview';
+            renderClassList();
+            renderClassDetail();
+        });
+        li.appendChild(btn);
+        list.appendChild(li);
+    });
+}
+
+function renderClassDetail() {
+    const detail = document.getElementById('classDetail');
+    const course = state.courses.find(c => c.id === state.selectedCourseId);
+    if (!course) {
+        detail.innerHTML = `<p class="hint">Select a class on the left, or add a new one, to see its details.</p>`;
+        return;
+    }
+
+    const tabsHtml = CLASS_INNER_TABS.map(tab => `
+        <button type="button" class="inner-tab${tab === state.classInnerTab ? ' active' : ''}" data-tab="${tab}">
+            ${tab === 'overview' ? 'Overview' : tab === 'tasks' ? 'Tasks' : 'Syllabus'}
+        </button>`).join('');
+
+    detail.innerHTML = `
+        <div class="class-detail-header">
+            <span class="class-color-dot" style="background:${escapeHtml(course.colorHex || '#4f46e5')}"></span>
+            <h2>${escapeHtml(course.name)}</h2>
+        </div>
+        <div class="class-detail-meta">${escapeHtml(course.code || '')}${course.code && course.instructor ? ' · ' : ''}${escapeHtml(course.instructor || '')}</div>
+        <div class="inner-tabs">${tabsHtml}</div>
+        <div id="classInnerContent"></div>`;
+
+    detail.querySelectorAll('.inner-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.classInnerTab = btn.dataset.tab;
+            renderClassDetail();
+        });
+    });
+
+    const content = document.getElementById('classInnerContent');
+    if (state.classInnerTab === 'overview') {
+        renderClassOverview(content, course);
+    } else if (state.classInnerTab === 'tasks') {
+        renderClassTasks(content, course);
+    } else {
+        renderClassSyllabus(content, course);
+    }
+}
+
+function renderClassOverview(content, course) {
+    content.innerHTML = `
+        <div class="class-overview-fields">
+            <p><strong>Name:</strong> ${escapeHtml(course.name)}</p>
+            <p><strong>Code:</strong> ${escapeHtml(course.code || '—')}</p>
+            <p><strong>Instructor:</strong> ${escapeHtml(course.instructor || '—')}</p>
+            <p><strong>Source:</strong> ${course.canvasCourseId ? 'Synced from Canvas' : 'Manually added'}</p>
+        </div>
+        <div class="class-detail-actions">
+            <button type="button" class="btn btn-outline" id="editClassBtn">Edit</button>
+            <button type="button" class="btn btn-outline" id="deleteClassBtn">Delete class</button>
+        </div>`;
+    content.querySelector('#editClassBtn').addEventListener('click', () => openClassModal(course));
+    content.querySelector('#deleteClassBtn').addEventListener('click', () => onDeleteClass(course));
+}
+
+function renderClassTasks(content, course) {
+    const tasks = state.allTasks
+        .filter(t => t.course && t.course.id === course.id)
+        .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+    if (tasks.length === 0) {
+        content.innerHTML = `<p class="hint">No tasks for this class yet. Add one from the Dashboard to-do list and assign it to this course.</p>`;
+        return;
+    }
+    const list = document.createElement('ul');
+    list.className = 'todo-list';
+    tasks.forEach(t => list.appendChild(todoItem(t)));
+    content.innerHTML = '';
+    content.appendChild(list);
+}
+
+function renderClassSyllabus(content, course) {
+    const tasks = state.allTasks
+        .filter(t => t.course && t.course.id === course.id && t.fromSyllabus)
+        .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+    if (tasks.length === 0) {
+        content.innerHTML = `<p class="hint">No syllabus-derived dates for this class yet. Upload a syllabus from the Dashboard and assign items to this course.</p>`;
+        return;
+    }
+    const list = document.createElement('ul');
+    list.className = 'todo-list';
+    tasks.forEach(t => list.appendChild(todoItem(t)));
+    content.innerHTML = '';
+    content.appendChild(list);
+}
+
+function openClassModal(course) {
+    document.getElementById('classModalTitle').textContent = course ? 'Edit Class' : 'Add Class';
+    document.getElementById('classId').value = course ? course.id : '';
+    document.getElementById('className').value = course ? course.name : '';
+    document.getElementById('classCode').value = course ? (course.code || '') : '';
+    document.getElementById('classInstructor').value = course ? (course.instructor || '') : '';
+    document.getElementById('classColor').value = course ? (course.colorHex || '#4f46e5') : '#4f46e5';
+    toggleModal('classModal', true);
+}
+
+async function onSaveClass(e) {
+    e.preventDefault();
+    const id = document.getElementById('classId').value;
+    const payload = {
+        name: document.getElementById('className').value.trim(),
+        code: document.getElementById('classCode').value.trim(),
+        instructor: document.getElementById('classInstructor').value.trim(),
+        colorHex: document.getElementById('classColor').value,
+    };
+    if (!payload.name) return;
+    const saved = id ? await api(`/api/courses/${id}`, 'PUT', payload) : await api('/api/courses', 'POST', payload);
+    toggleModal('classModal', false);
+    state.selectedCourseId = saved.id;
+    state.classInnerTab = 'overview';
+    await loadClassesView();
+}
+
+async function onDeleteClass(course) {
+    if (!confirm(`Delete "${course.name}"? This will also delete all of its tasks.`)) return;
+    await api(`/api/courses/${course.id}`, 'DELETE');
+    state.selectedCourseId = null;
+    await loadClassesView();
 }
 
 /* ---------------- Settings / customization ---------------- */

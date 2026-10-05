@@ -2,6 +2,7 @@ package com.academictaskmanager.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,10 @@ public class Course {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // Ignored by Jackson: serializing this back-reference alongside AcademicTask.course would
+    // either recurse infinitely or lazily hit a closed Hibernate session outside a transaction.
+    // Clients fetch a course's tasks via GET /api/tasks?courseId=... instead.
+    @JsonIgnore
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AcademicTask> tasks = new ArrayList<>();
 
