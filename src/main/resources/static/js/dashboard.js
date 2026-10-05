@@ -345,7 +345,9 @@ function sportsGameRow(g, label) {
  */
 function gameLink(g, innerHtml) {
     if (!g.espnUrl) return `<span class="game-link">${innerHtml}</span>`;
-    return `<a class="game-link" href="${escapeHtml(g.espnUrl)}" target="_blank" rel="noopener noreferrer">${innerHtml}</a>`;
+    // Navigates in the same tab (no target="_blank") so the click always works even in
+    // sandboxed/embedded browser contexts that silently block new-tab popups.
+    return `<a class="game-link" href="${escapeHtml(g.espnUrl)}" rel="noopener noreferrer">${innerHtml}</a>`;
 }
 
 /**
