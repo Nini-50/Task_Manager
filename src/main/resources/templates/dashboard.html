@@ -34,6 +34,7 @@
             <div class="card-header">
                 <h2>Calendar</h2>
                 <div class="calendar-nav">
+                    <button type="button" id="addEventBtn" class="btn btn-small btn-outline">+ Event</button>
                     <button id="prevWeekBtn">‹</button>
                     <span id="calendarRangeLabel"></span>
                     <button id="nextWeekBtn">›</button>
@@ -164,6 +165,34 @@
             </label>
             <div class="modal-actions">
                 <button type="button" id="closeClassBtn" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add event modal (time-based calendar entries, distinct from tasks) -->
+<div id="eventModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>Add Event</h2>
+        <form id="eventForm">
+            <label>Title
+                <input type="text" id="eventTitle" required placeholder="Study group">
+            </label>
+            <label>Date
+                <input type="date" id="eventDate" required>
+            </label>
+            <label>Start time
+                <input type="time" id="eventStartTime" required>
+            </label>
+            <label>End time (optional)
+                <input type="time" id="eventEndTime">
+            </label>
+            <label>Location (optional)
+                <input type="text" id="eventLocation" placeholder="Library room 204">
+            </label>
+            <div class="modal-actions">
+                <button type="button" id="closeEventBtn" class="btn btn-outline">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </form>

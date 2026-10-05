@@ -33,6 +33,10 @@ function wireEvents() {
     document.getElementById('nextWeekBtn').addEventListener('click', () => shiftMonth(1));
     document.getElementById('todoForm').addEventListener('submit', onAddTodo);
 
+    document.getElementById('addEventBtn').addEventListener('click', openEventModal);
+    document.getElementById('closeEventBtn').addEventListener('click', () => toggleModal('eventModal', false));
+    document.getElementById('eventForm').addEventListener('submit', onSaveEvent);
+
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
     document.getElementById('closeSettingsBtn').addEventListener('click', () => toggleModal('settingsModal', false));
     document.getElementById('settingsForm').addEventListener('submit', onSaveSettings);
@@ -88,7 +92,10 @@ async function renderCalendar() {
     document.getElementById('calendarRangeLabel').textContent =
         monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-    const tasks = await api(`/api/tasks/upcoming?start=${toIso(gridStart)}&end=${toIso(gridEnd)}`);
+    const [tasks, events] = await Promise.all([
+        api(`/api/tasks/upcoming?start=${toIso(gridStart)}&end=${toIso(gridEnd)}`),
+        api(`/api/events/upcoming?start=${toIso(gridStart)}&end=${toIso(gridEnd)}`),
+    ]);
 
     const weekdaysRow = document.getElementById('calendarWeekdays');
     if (weekdaysRow && !weekdaysRow.childElementCount) {
@@ -103,6 +110,7 @@ async function renderCalendar() {
         const day = new Date(gridStart);
         day.setDate(gridStart.getDate() + i);
         const dayTasks = tasks.filter(t => t.dueDate && sameDay(new Date(t.dueDate), day));
+        const dayEvents = events.filter(e => e.startDateTime && sameDay(new Date(e.startDateTime), day));
         const inMonth = day.getMonth() === monthStart.getMonth();
 
         const col = document.createElement('div');
@@ -112,6 +120,15 @@ async function renderCalendar() {
             sameDay(day, today) ? 'calendar-day-today' : '',
         ].filter(Boolean).join(' ');
         col.innerHTML = `<div class="day-label">${day.getDate()}</div>`;
+        dayEvents.forEach(ev => {
+            const tag = document.createElement('div');
+            tag.className = 'calendar-event';
+            const timeLabel = formatTime(ev.startDateTime) + (ev.endDateTime ? ` – ${formatTime(ev.endDateTime)}` : '');
+            tag.title = `${ev.title} — ${timeLabel}${ev.location ? ' @ ' + ev.location : ''} (click to delete)`;
+            tag.textContent = `🕒 ${timeLabel} ${ev.title}`;
+            tag.addEventListener('click', () => onDeleteEvent(ev));
+            col.appendChild(tag);
+        });
         dayTasks.forEach(t => {
             const urgency = urgencyFor(t.priority);
             const isCompleted = t.status === 'COMPLETED';
@@ -132,6 +149,41 @@ function sameDay(a, b) {
 
 function toIso(d) {
     return d.toISOString().slice(0, 19);
+}
+
+function formatTime(dateStr) {
+    return new Date(dateStr).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+/* ---------------- Events (time-based calendar entries) ---------------- */
+
+function openEventModal() {
+    document.getElementById('eventForm').reset();
+    const today = new Date();
+    document.getElementById('eventDate').value = today.toISOString().slice(0, 10);
+    toggleModal('eventModal', true);
+}
+
+async function onSaveEvent(e) {
+    e.preventDefault();
+    const date = document.getElementById('eventDate').value;
+    const startTime = document.getElementById('eventStartTime').value;
+    const endTime = document.getElementById('eventEndTime').value;
+    const payload = {
+        title: document.getElementById('eventTitle').value,
+        startDateTime: `${date}T${startTime}:00`,
+        endDateTime: endTime ? `${date}T${endTime}:00` : null,
+        location: document.getElementById('eventLocation').value || null,
+    };
+    await api('/api/events', 'POST', payload);
+    toggleModal('eventModal', false);
+    await renderCalendar();
+}
+
+async function onDeleteEvent(ev) {
+    if (!confirm(`Delete "${ev.title}"?`)) return;
+    await api(`/api/events/${ev.id}`, 'DELETE');
+    await renderCalendar();
 }
 
 /* ---------------- To-dos ---------------- */
