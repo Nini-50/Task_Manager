@@ -7,7 +7,7 @@ import com.academictaskmanager.service.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-/** Powers the "Customize" panel: theme color/mode, optional widgets, and Canvas connection. */
+/** Powers the "Customize" panel: theme color/mode and optional widgets. */
 @RestController
 @RequestMapping("/api/settings")
 public class SettingsController {

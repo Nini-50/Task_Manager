@@ -11,7 +11,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,18 +56,6 @@ class AcademicTaskRepositoryTest {
         List<AcademicTask> results = taskRepository.findByOwnerAndStatusNotOrderByDueDateAsc(owner, TaskStatus.COMPLETED);
 
         assertThat(results).extracting(AcademicTask::getTitle).containsExactly("Active");
-    }
-
-    @Test
-    void findByOwnerAndCanvasAssignmentIdReturnsMatchingTask() {
-        AcademicTask task = save("Canvas task", TaskType.ASSIGNMENT, LocalDateTime.now());
-        task.setCanvasAssignmentId(555L);
-        taskRepository.save(task);
-
-        Optional<AcademicTask> result = taskRepository.findByOwnerAndCanvasAssignmentId(owner, 555L);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getTitle()).isEqualTo("Canvas task");
     }
 
     private AcademicTask save(String title, TaskType type, LocalDateTime dueDate) {

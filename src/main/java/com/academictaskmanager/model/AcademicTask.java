@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
 /**
- * A single unit of academic work: a Canvas-synced assignment/quiz/exam, a
+ * A single unit of academic work: an assignment/quiz/exam, a
  * syllabus-derived event, or a manually created to-do item. Everything shown
  * on the dashboard calendar and to-do list is backed by this entity.
  */
@@ -38,10 +38,7 @@ public class AcademicTask {
     @JoinColumn(name = "course_id")
     private Course course;
 
-    /** Non-null when this task was imported from a Canvas assignment. */
-    private Long canvasAssignmentId;
-
-    /** True when this task was parsed out of an uploaded syllabus rather than Canvas or manual entry. */
+    /** True when this task was parsed out of an uploaded syllabus rather than manual entry. */
     private boolean fromSyllabus = false;
 
     /** The account this task belongs to. */
@@ -75,9 +72,6 @@ public class AcademicTask {
 
     public Course getCourse() { return course; }
     public void setCourse(Course course) { this.course = course; }
-
-    public Long getCanvasAssignmentId() { return canvasAssignmentId; }
-    public void setCanvasAssignmentId(Long canvasAssignmentId) { this.canvasAssignmentId = canvasAssignmentId; }
 
     public boolean isFromSyllabus() { return fromSyllabus; }
     public void setFromSyllabus(boolean fromSyllabus) { this.fromSyllabus = fromSyllabus; }

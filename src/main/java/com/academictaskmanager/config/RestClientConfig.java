@@ -8,8 +8,8 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
     /**
-     * Plain RestClient; the Canvas base URL/token are applied per-request since they are
-     * user-configurable. A browser-like User-Agent is set because some public APIs (e.g. ESPN's
+     * Plain RestClient shared by services that call external public APIs (e.g. weather, sports
+     * scores). A browser-like User-Agent is set because some public APIs (e.g. ESPN's
      * scoreboard, which sits behind Akamai) reject the JVM's default "Java/x.y.z" User-Agent with
      * a 403.
      */

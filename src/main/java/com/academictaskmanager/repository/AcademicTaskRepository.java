@@ -17,7 +17,5 @@ public interface AcademicTaskRepository extends JpaRepository<AcademicTask, Long
 
     List<AcademicTask> findByOwnerOrderByDueDateAsc(User owner);
 
-    Optional<AcademicTask> findByOwnerAndCanvasAssignmentId(User owner, Long canvasAssignmentId);
-
     Optional<AcademicTask> findByIdAndOwner(Long id, User owner);
 }

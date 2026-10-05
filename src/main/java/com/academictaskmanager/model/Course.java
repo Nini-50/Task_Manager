@@ -8,8 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A course the student is enrolled in. Can originate from a manual entry or be
- * synced from Canvas LMS (in which case canvasCourseId is populated).
+ * A course the student is enrolled in.
  */
 @Entity
 @Table(name = "courses")
@@ -27,9 +26,6 @@ public class Course {
 
     /** Hex color used to color-code this course across the dashboard/calendar. */
     private String colorHex = "#4f46e5";
-
-    /** Non-null when this course was imported from Canvas. */
-    private Long canvasCourseId;
 
     private String instructor;
 
@@ -58,9 +54,6 @@ public class Course {
 
     public String getColorHex() { return colorHex; }
     public void setColorHex(String colorHex) { this.colorHex = colorHex; }
-
-    public Long getCanvasCourseId() { return canvasCourseId; }
-    public void setCanvasCourseId(Long canvasCourseId) { this.canvasCourseId = canvasCourseId; }
 
     public String getInstructor() { return instructor; }
     public void setInstructor(String instructor) { this.instructor = instructor; }

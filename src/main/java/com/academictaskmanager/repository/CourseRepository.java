@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
-    Optional<Course> findByOwnerAndCanvasCourseId(User owner, Long canvasCourseId);
     List<Course> findByOwner(User owner);
     Optional<Course> findByIdAndOwner(Long id, User owner);
 }

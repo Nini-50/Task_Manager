@@ -14,7 +14,6 @@
         <h1>📚 Academic Task Manager</h1>
         <div class="topbar-actions">
             <span class="current-user" sec:authentication="name"></span>
-            <button id="syncCanvasBtn" class="btn btn-outline">Sync Canvas</button>
             <button id="uploadSyllabusBtn" class="btn btn-outline">Upload Syllabus</button>
             <button id="settingsBtn" class="btn btn-icon" title="Customize">⚙️</button>
             <form th:action="@{/logout}" method="post" class="logout-form">
@@ -127,15 +126,6 @@
                     <option value="soccer/eng.1">Premier League (Soccer)</option>
                 </select>
                 <input type="text" id="sportsTeam" placeholder="Favorite team (e.g. Celtics)">
-            </fieldset>
-            <fieldset>
-                <legend>Canvas LMS Connection</legend>
-                <label>Canvas base URL
-                    <input type="text" id="canvasBaseUrl" placeholder="https://yourschool.instructure.com">
-                </label>
-                <label>Canvas API token
-                    <input type="password" id="canvasApiToken" placeholder="Personal access token">
-                </label>
             </fieldset>
             <div class="modal-actions">
                 <button type="button" id="closeSettingsBtn" class="btn btn-outline">Cancel</button>

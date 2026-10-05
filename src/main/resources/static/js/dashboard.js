@@ -43,8 +43,6 @@ function wireEvents() {
     document.getElementById('settingsForm').addEventListener('submit', onSaveSettings);
     document.getElementById('themeSwatches').addEventListener('click', onSwatchClick);
 
-    document.getElementById('syncCanvasBtn').addEventListener('click', onSyncCanvas);
-
     document.getElementById('uploadSyllabusBtn').addEventListener('click', () => toggleModal('syllabusModal', true));
     document.getElementById('closeSyllabusBtn').addEventListener('click', () => toggleModal('syllabusModal', false));
     document.getElementById('previewSyllabusBtn').addEventListener('click', onPreviewSyllabus);
@@ -435,7 +433,6 @@ function renderClassOverview(content, course) {
             <p><strong>Name:</strong> ${escapeHtml(course.name)}</p>
             <p><strong>Code:</strong> ${escapeHtml(course.code || '—')}</p>
             <p><strong>Instructor:</strong> ${escapeHtml(course.instructor || '—')}</p>
-            <p><strong>Source:</strong> ${course.canvasCourseId ? 'Synced from Canvas' : 'Manually added'}</p>
         </div>
         <div class="class-detail-actions">
             <button type="button" class="btn btn-outline" id="editClassBtn">Edit</button>
@@ -667,8 +664,6 @@ function openSettingsModal() {
     document.getElementById('sportsWidgetEnabled').checked = !!s.sportsWidgetEnabled;
     document.getElementById('sportsLeague').value = s.sportsLeague || 'football/nfl';
     document.getElementById('sportsTeam').value = s.sportsTeam || '';
-    document.getElementById('canvasBaseUrl').value = s.canvasBaseUrl || '';
-    document.getElementById('canvasApiToken').value = '';
     toggleModal('settingsModal', true);
 }
 
@@ -683,12 +678,6 @@ async function onSaveSettings(e) {
     s.sportsWidgetEnabled = document.getElementById('sportsWidgetEnabled').checked;
     s.sportsLeague = document.getElementById('sportsLeague').value;
     s.sportsTeam = document.getElementById('sportsTeam').value;
-    s.canvasBaseUrl = document.getElementById('canvasBaseUrl').value;
-    const token = document.getElementById('canvasApiToken').value;
-    if (token) {
-        s.canvasApiToken = token;
-        s.canvasSyncEnabled = true;
-    }
     state.settings = await api('/api/settings', 'PUT', s);
     applyTheme();
     await renderWidgets();
@@ -817,27 +806,6 @@ function scoreboardTable(g) {
                 <td class="team-score">${g.homeScore ?? '–'}</td>
             </tr>
         </table>`;
-}
-
-/* ---------------- Canvas sync ---------------- */
-
-async function onSyncCanvas() {
-    const btn = document.getElementById('syncCanvasBtn');
-    btn.disabled = true;
-    btn.textContent = 'Syncing…';
-    try {
-        const result = await api('/api/canvas/sync', 'POST');
-        if (result.status === 'ok') {
-            alert(`Synced ${result.tasksSynced} Canvas items.`);
-            await renderCalendar();
-            await renderTodos();
-        } else {
-            alert(result.message || 'Canvas sync failed.');
-        }
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Sync Canvas';
-    }
 }
 
 /* ---------------- Syllabus upload ---------------- */
