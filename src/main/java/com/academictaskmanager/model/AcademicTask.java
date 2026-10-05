@@ -46,6 +46,16 @@ public class AcademicTask {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    /**
+     * Shared by every occurrence generated from the same recurring series (null for a one-off
+     * task). Each occurrence is its own independent row, so editing or deleting one does not
+     * affect the others; deleting the whole series removes every row sharing this id.
+     */
+    private String seriesId;
+
+    /** Human-readable description of the recurrence rule (e.g. "Repeats weekly on Mon, Wed until Dec 15, 2026"), copied onto every occurrence for display. Null for a one-off task. */
+    private String recurrenceSummary;
+
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
@@ -78,6 +88,12 @@ public class AcademicTask {
 
     public User getOwner() { return owner; }
     public void setOwner(User owner) { this.owner = owner; }
+
+    public String getSeriesId() { return seriesId; }
+    public void setSeriesId(String seriesId) { this.seriesId = seriesId; }
+
+    public String getRecurrenceSummary() { return recurrenceSummary; }
+    public void setRecurrenceSummary(String recurrenceSummary) { this.recurrenceSummary = recurrenceSummary; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -76,4 +76,39 @@ class EventServiceTest {
 
         verify(eventRepository).delete(event);
     }
+
+    @Test
+    void createRecurringSeriesMaterializesOneRowPerOccurrence() {
+        Event seed = new Event();
+        seed.setTitle("Study group");
+        seed.setStartDateTime(LocalDateTime.of(2026, 3, 2, 9, 0));
+        seed.setEndDateTime(LocalDateTime.of(2026, 3, 2, 10, 0));
+        com.academictaskmanager.dto.RecurrenceRequest recurrence = new com.academictaskmanager.dto.RecurrenceRequest();
+        recurrence.setFrequency(com.academictaskmanager.model.RecurrenceFrequency.WEEKLY);
+        recurrence.setUntil(java.time.LocalDate.of(2026, 3, 16));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<Event> saved = eventService.createRecurringSeries(seed, recurrence, owner);
+
+        assertThat(saved).hasSize(3);
+        assertThat(saved).extracting(Event::getSeriesId).doesNotContainNull();
+        assertThat(saved.stream().map(Event::getSeriesId).distinct()).hasSize(1);
+        assertThat(saved).allMatch(e -> e.getOwner() == owner);
+        assertThat(saved.get(0).getEndDateTime()).isEqualTo(LocalDateTime.of(2026, 3, 2, 10, 0));
+        assertThat(saved.get(1).getStartDateTime()).isEqualTo(LocalDateTime.of(2026, 3, 9, 9, 0));
+    }
+
+    @Test
+    void deleteSeriesDeletesEveryMatchingRow() {
+        Event a = new Event();
+        a.setId(1L);
+        Event b = new Event();
+        b.setId(2L);
+        when(eventRepository.findBySeriesIdAndOwner("series-1", owner)).thenReturn(List.of(a, b));
+
+        eventService.deleteSeries("series-1", owner);
+
+        verify(eventRepository).delete(a);
+        verify(eventRepository).delete(b);
+    }
 }

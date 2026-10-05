@@ -1,5 +1,6 @@
 package com.academictaskmanager.controller;
 
+import com.academictaskmanager.dto.RecurringTaskRequest;
 import com.academictaskmanager.model.AcademicTask;
 import com.academictaskmanager.model.User;
 import com.academictaskmanager.service.TaskService;
@@ -59,10 +60,30 @@ public class TaskController {
         return ResponseEntity.ok(taskService.save(task, currentUser(authentication)));
     }
 
+    /** Creates a recurring series of tasks; returns every materialized occurrence. */
+    @PostMapping("/series")
+    public ResponseEntity<List<AcademicTask>> createSeries(Authentication authentication, @Valid @RequestBody RecurringTaskRequest request) {
+        request.getTask().setId(null);
+        return ResponseEntity.ok(taskService.createRecurringSeries(request.getTask(), request.getRecurrence(), currentUser(authentication)));
+    }
+
+    /** Deletes every occurrence of a recurring series. */
+    @DeleteMapping("/series/{seriesId}")
+    public ResponseEntity<Void> deleteSeries(Authentication authentication, @PathVariable String seriesId) {
+        taskService.deleteSeries(seriesId, currentUser(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}")
     public AcademicTask update(Authentication authentication, @PathVariable Long id, @Valid @RequestBody AcademicTask task) {
+        User owner = currentUser(authentication);
+        // Editing a single occurrence shouldn't sever its series membership or wipe the
+        // human-readable summary; the edit form never submits those fields, so carry them over.
+        AcademicTask existing = taskService.findById(id, owner);
         task.setId(id);
-        return taskService.save(task, currentUser(authentication));
+        task.setSeriesId(existing.getSeriesId());
+        task.setRecurrenceSummary(existing.getRecurrenceSummary());
+        return taskService.save(task, owner);
     }
 
     @PostMapping("/{id}/complete")

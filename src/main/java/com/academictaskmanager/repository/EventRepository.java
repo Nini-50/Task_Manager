@@ -16,4 +16,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByOwnerOrderByStartDateTimeAsc(User owner);
 
     Optional<Event> findByIdAndOwner(Long id, User owner);
+
+    List<Event> findBySeriesIdAndOwner(String seriesId, User owner);
 }

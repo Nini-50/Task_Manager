@@ -58,6 +58,33 @@
                     </select>
                     <button type="submit" class="btn btn-primary">Add</button>
                 </form>
+                <div class="repeat-toggle-row">
+                    <label><input type="checkbox" id="todoRepeatEnabled"> 🔁 Repeat</label>
+                </div>
+                <div id="todoRepeatFields" class="repeat-fields hidden">
+                    <label>Frequency
+                        <select id="todoRepeatFrequency">
+                            <option value="DAILY">Daily</option>
+                            <option value="WEEKLY" selected>Weekly</option>
+                            <option value="MONTHLY">Monthly</option>
+                        </select>
+                    </label>
+                    <label>Every
+                        <input type="number" id="todoRepeatInterval" min="1" value="1">
+                    </label>
+                    <div id="todoRepeatDaysRow" class="repeat-days">
+                        <label><input type="checkbox" value="MONDAY"> Mo</label>
+                        <label><input type="checkbox" value="TUESDAY"> Tu</label>
+                        <label><input type="checkbox" value="WEDNESDAY"> We</label>
+                        <label><input type="checkbox" value="THURSDAY"> Th</label>
+                        <label><input type="checkbox" value="FRIDAY"> Fr</label>
+                        <label><input type="checkbox" value="SATURDAY"> Sa</label>
+                        <label><input type="checkbox" value="SUNDAY"> Su</label>
+                    </div>
+                    <label>Until
+                        <input type="date" id="todoRepeatUntil">
+                    </label>
+                </div>
                 <ul id="todoList" class="todo-list"></ul>
             </section>
 
@@ -181,6 +208,33 @@
             <label>Location (optional)
                 <input type="text" id="eventLocation" placeholder="Library room 204">
             </label>
+            <div class="repeat-toggle-row">
+                <label><input type="checkbox" id="eventRepeatEnabled"> 🔁 Repeat</label>
+            </div>
+            <div id="eventRepeatFields" class="repeat-fields hidden">
+                <label>Frequency
+                    <select id="eventRepeatFrequency">
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY" selected>Weekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                    </select>
+                </label>
+                <label>Every
+                    <input type="number" id="eventRepeatInterval" min="1" value="1">
+                </label>
+                <div id="eventRepeatDaysRow" class="repeat-days">
+                    <label><input type="checkbox" value="MONDAY"> Mo</label>
+                    <label><input type="checkbox" value="TUESDAY"> Tu</label>
+                    <label><input type="checkbox" value="WEDNESDAY"> We</label>
+                    <label><input type="checkbox" value="THURSDAY"> Th</label>
+                    <label><input type="checkbox" value="FRIDAY"> Fr</label>
+                    <label><input type="checkbox" value="SATURDAY"> Sa</label>
+                    <label><input type="checkbox" value="SUNDAY"> Su</label>
+                </div>
+                <label>Until
+                    <input type="date" id="eventRepeatUntil">
+                </label>
+            </div>
             <div class="modal-actions">
                 <button type="button" id="closeEventBtn" class="btn btn-outline">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save</button>
@@ -197,6 +251,7 @@
         <div class="modal-actions">
             <button type="button" id="closeDetailsBtn" class="btn btn-outline">Close</button>
             <button type="button" id="detailsCompleteBtn" class="btn btn-outline hidden">Mark complete</button>
+            <button type="button" id="detailsDeleteSeriesBtn" class="btn btn-outline hidden">Delete entire series</button>
             <button type="button" id="detailsDeleteBtn" class="btn btn-danger">Delete</button>
         </div>
     </div>

@@ -32,11 +32,13 @@ function wireEvents() {
     document.getElementById('prevWeekBtn').addEventListener('click', () => shiftMonth(-1));
     document.getElementById('nextWeekBtn').addEventListener('click', () => shiftMonth(1));
     document.getElementById('todoForm').addEventListener('submit', onAddTodo);
+    wireRepeatToggle('todo');
 
     document.getElementById('addEventBtn').addEventListener('click', openEventModal);
     document.getElementById('closeEventBtn').addEventListener('click', () => toggleModal('eventModal', false));
     document.getElementById('closeDetailsBtn').addEventListener('click', () => toggleModal('detailsModal', false));
     document.getElementById('eventForm').addEventListener('submit', onSaveEvent);
+    wireRepeatToggle('event');
 
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
     document.getElementById('closeSettingsBtn').addEventListener('click', () => toggleModal('settingsModal', false));
@@ -161,6 +163,7 @@ function openEventModal() {
     document.getElementById('eventForm').reset();
     const today = new Date();
     document.getElementById('eventDate').value = today.toISOString().slice(0, 10);
+    resetRepeatFields('event');
     toggleModal('eventModal', true);
 }
 
@@ -175,9 +178,66 @@ async function onSaveEvent(e) {
         endDateTime: endTime ? `${date}T${endTime}:00` : null,
         location: document.getElementById('eventLocation').value || null,
     };
-    await api('/api/events', 'POST', payload);
+    const recurrence = collectRecurrence('event');
+    if (recurrence === undefined) return; // invalid repeat config; collectRecurrence already alerted
+    if (recurrence) {
+        await api('/api/events/series', 'POST', { event: payload, recurrence });
+    } else {
+        await api('/api/events', 'POST', payload);
+    }
     toggleModal('eventModal', false);
     await renderCalendar();
+}
+
+/* ---------------- Recurrence helpers ----------------
+ * Shared by the event modal, the quick-add to-do form, and the per-class task form.
+ * Each form's repeat controls use ids of the form `${prefix}Repeat...`.
+ */
+function wireRepeatToggle(prefix) {
+    const checkbox = document.getElementById(`${prefix}RepeatEnabled`);
+    const fields = document.getElementById(`${prefix}RepeatFields`);
+    if (!checkbox || !fields) return;
+    checkbox.addEventListener('change', () => fields.classList.toggle('hidden', !checkbox.checked));
+    const frequencySelect = document.getElementById(`${prefix}RepeatFrequency`);
+    const daysRow = document.getElementById(`${prefix}RepeatDaysRow`);
+    if (frequencySelect && daysRow) {
+        const syncDaysVisibility = () => daysRow.classList.toggle('hidden', frequencySelect.value !== 'WEEKLY');
+        frequencySelect.addEventListener('change', syncDaysVisibility);
+        syncDaysVisibility();
+    }
+}
+
+function resetRepeatFields(prefix) {
+    const checkbox = document.getElementById(`${prefix}RepeatEnabled`);
+    const fields = document.getElementById(`${prefix}RepeatFields`);
+    if (checkbox) checkbox.checked = false;
+    if (fields) fields.classList.add('hidden');
+    const interval = document.getElementById(`${prefix}RepeatInterval`);
+    if (interval) interval.value = '1';
+    const until = document.getElementById(`${prefix}RepeatUntil`);
+    if (until) until.value = '';
+    document.querySelectorAll(`#${prefix}RepeatDaysRow input[type="checkbox"]`).forEach(cb => { cb.checked = false; });
+}
+
+/**
+ * Reads the repeat controls for the given form prefix.
+ * Returns null when repeat isn't enabled (caller should do a normal single-item create),
+ * an object { frequency, interval, daysOfWeek, until } when it is, or undefined when
+ * repeat is enabled but missing a required "until" date (caller should abort; an alert was shown).
+ */
+function collectRecurrence(prefix) {
+    const checkbox = document.getElementById(`${prefix}RepeatEnabled`);
+    if (!checkbox || !checkbox.checked) return null;
+    const frequency = document.getElementById(`${prefix}RepeatFrequency`).value;
+    const interval = parseInt(document.getElementById(`${prefix}RepeatInterval`).value, 10) || 1;
+    const until = document.getElementById(`${prefix}RepeatUntil`).value;
+    if (!until) {
+        alert('Please choose an "Until" date for the repeating series.');
+        return undefined;
+    }
+    const daysOfWeek = Array.from(document.querySelectorAll(`#${prefix}RepeatDaysRow input[type="checkbox"]:checked`))
+        .map(cb => cb.value);
+    return { frequency, interval, daysOfWeek: daysOfWeek.length ? daysOfWeek : null, until };
 }
 
 function formatDateTime(dateStr) {
@@ -194,6 +254,7 @@ function openEventDetails(ev) {
             ${ev.location ? `<dt>Location</dt><dd>${escapeHtml(ev.location)}</dd>` : ''}
             ${ev.course ? `<dt>Class</dt><dd>${escapeHtml(ev.course.name)}</dd>` : ''}
             ${ev.description ? `<dt>Description</dt><dd>${escapeHtml(ev.description)}</dd>` : ''}
+            ${ev.recurrenceSummary ? `<dt>Repeats</dt><dd>🔁 ${escapeHtml(ev.recurrenceSummary)}</dd>` : ''}
         </dl>`;
     document.getElementById('detailsCompleteBtn').classList.add('hidden');
     document.getElementById('detailsDeleteBtn').onclick = async () => {
@@ -202,6 +263,16 @@ function openEventDetails(ev) {
         toggleModal('detailsModal', false);
         await renderCalendar();
     };
+    const deleteSeriesBtn = document.getElementById('detailsDeleteSeriesBtn');
+    deleteSeriesBtn.classList.toggle('hidden', !ev.seriesId);
+    if (ev.seriesId) {
+        deleteSeriesBtn.onclick = async () => {
+            if (!confirm(`Delete the entire repeating series for "${ev.title}"? This removes every occurrence.`)) return;
+            await api(`/api/events/series/${ev.seriesId}`, 'DELETE');
+            toggleModal('detailsModal', false);
+            await renderCalendar();
+        };
+    }
     toggleModal('detailsModal', true);
 }
 
@@ -224,6 +295,7 @@ function openTaskDetails(t) {
             <dd>${isCompleted ? '✅ Completed' : '⏳ Pending'}</dd>
             ${t.course ? `<dt>Class</dt><dd>${escapeHtml(t.course.name)}</dd>` : ''}
             ${t.description ? `<dt>Description</dt><dd>${escapeHtml(t.description)}</dd>` : ''}
+            ${t.recurrenceSummary ? `<dt>Repeats</dt><dd>🔁 ${escapeHtml(t.recurrenceSummary)}</dd>` : ''}
         </dl>`;
     const completeBtn = document.getElementById('detailsCompleteBtn');
     completeBtn.classList.toggle('hidden', isCompleted);
@@ -241,6 +313,17 @@ function openTaskDetails(t) {
         await renderTodos();
         await renderCalendar();
     };
+    const deleteSeriesBtn = document.getElementById('detailsDeleteSeriesBtn');
+    deleteSeriesBtn.classList.toggle('hidden', !t.seriesId);
+    if (t.seriesId) {
+        deleteSeriesBtn.onclick = async () => {
+            if (!confirm(`Delete the entire repeating series for "${t.title}"? This removes every occurrence.`)) return;
+            await api(`/api/tasks/series/${t.seriesId}`, 'DELETE');
+            toggleModal('detailsModal', false);
+            await renderTodos();
+            await renderCalendar();
+        };
+    }
     toggleModal('detailsModal', true);
 }
 
@@ -314,10 +397,20 @@ async function onAddTodo(e) {
     if (dueDateValue) {
         // Date-only input; treat the due date as end-of-day so same-day tasks aren't marked overdue early.
         payload.dueDate = `${dueDateValue}T23:59:00`;
+    } else if (document.getElementById('todoRepeatEnabled').checked) {
+        alert('Please choose a due date to use as the first occurrence of a repeating task.');
+        return;
     }
-    await api('/api/tasks', 'POST', payload);
+    const recurrence = collectRecurrence('todo');
+    if (recurrence === undefined) return; // invalid repeat config; collectRecurrence already alerted
+    if (recurrence) {
+        await api('/api/tasks/series', 'POST', { task: payload, recurrence });
+    } else {
+        await api('/api/tasks', 'POST', payload);
+    }
     document.getElementById('todoTitle').value = '';
     document.getElementById('todoDueDate').value = '';
+    resetRepeatFields('todo');
     await renderTodos();
     await renderCalendar();
 }
@@ -427,7 +520,7 @@ function renderClassDetail() {
     }
 }
 
-function renderClassOverview(content, course) {
+async function renderClassOverview(content, course) {
     content.innerHTML = `
         <div class="class-overview-fields">
             <p><strong>Name:</strong> ${escapeHtml(course.name)}</p>
@@ -437,9 +530,95 @@ function renderClassOverview(content, course) {
         <div class="class-detail-actions">
             <button type="button" class="btn btn-outline" id="editClassBtn">Edit</button>
             <button type="button" class="btn btn-outline" id="deleteClassBtn">Delete class</button>
-        </div>`;
+        </div>
+        <h3 class="class-schedule-heading">Class schedule</h3>
+        <div id="classScheduleList" class="schedule-list"><p class="hint">Loading…</p></div>
+        <form id="classScheduleForm" class="class-schedule-form">
+            <div class="repeat-days">
+                <label><input type="checkbox" value="MONDAY"> Mo</label>
+                <label><input type="checkbox" value="TUESDAY"> Tu</label>
+                <label><input type="checkbox" value="WEDNESDAY"> We</label>
+                <label><input type="checkbox" value="THURSDAY"> Th</label>
+                <label><input type="checkbox" value="FRIDAY"> Fr</label>
+                <label><input type="checkbox" value="SATURDAY"> Sa</label>
+                <label><input type="checkbox" value="SUNDAY"> Su</label>
+            </div>
+            <label>Start time <input type="time" id="scheduleStartTime" required></label>
+            <label>End time <input type="time" id="scheduleEndTime" required></label>
+            <label>Location <input type="text" id="scheduleLocation" placeholder="Room / building"></label>
+            <label>Term start <input type="date" id="scheduleTermStart" required></label>
+            <label>Term end <input type="date" id="scheduleTermEnd" required></label>
+            <button type="submit" class="btn btn-primary">Add meeting time</button>
+        </form>`;
     content.querySelector('#editClassBtn').addEventListener('click', () => openClassModal(course));
     content.querySelector('#deleteClassBtn').addEventListener('click', () => onDeleteClass(course));
+    content.querySelector('#classScheduleForm').addEventListener('submit', (e) => onAddClassSchedule(e, course, content));
+    await renderClassSchedules(content, course);
+}
+
+async function renderClassSchedules(content, course) {
+    const listEl = content.querySelector('#classScheduleList');
+    const events = await api('/api/events');
+    const scheduleEvents = events.filter(e => e.course && e.course.id === course.id && e.seriesId);
+    const bySeriesId = new Map();
+    scheduleEvents.forEach(e => {
+        if (!bySeriesId.has(e.seriesId)) bySeriesId.set(e.seriesId, e);
+    });
+    if (bySeriesId.size === 0) {
+        listEl.innerHTML = `<p class="hint">No recurring meeting times yet. Add one below.</p>`;
+        return;
+    }
+    listEl.innerHTML = '';
+    bySeriesId.forEach(ev => {
+        const item = document.createElement('div');
+        item.className = 'schedule-item';
+        item.innerHTML = `
+            <div>
+                <strong>${escapeHtml(formatTime(ev.startDateTime))}${ev.endDateTime ? ` – ${escapeHtml(formatTime(ev.endDateTime))}` : ''}</strong>
+                <div class="hint">${escapeHtml(ev.recurrenceSummary || '')}${ev.location ? ` · ${escapeHtml(ev.location)}` : ''}</div>
+            </div>
+            <button type="button" class="btn btn-outline btn-small" data-action="remove-schedule">Remove</button>`;
+        item.querySelector('[data-action="remove-schedule"]').addEventListener('click', async () => {
+            if (!confirm('Remove this class meeting schedule? This removes every scheduled occurrence.')) return;
+            await api(`/api/events/series/${ev.seriesId}`, 'DELETE');
+            await renderClassSchedules(content, course);
+            await renderCalendar();
+        });
+        listEl.appendChild(item);
+    });
+}
+
+async function onAddClassSchedule(e, course, content) {
+    e.preventDefault();
+    const daysOfWeek = Array.from(content.querySelectorAll('#classScheduleForm .repeat-days input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+    const startTime = content.querySelector('#scheduleStartTime').value;
+    const endTime = content.querySelector('#scheduleEndTime').value;
+    const location = content.querySelector('#scheduleLocation').value || null;
+    const termStart = content.querySelector('#scheduleTermStart').value;
+    const termEnd = content.querySelector('#scheduleTermEnd').value;
+    if (daysOfWeek.length === 0) {
+        alert('Please select at least one meeting day.');
+        return;
+    }
+    if (!termStart || !termEnd) {
+        alert('Please choose a term start and end date.');
+        return;
+    }
+    const payload = {
+        event: {
+            title: `${course.name} class`,
+            startDateTime: `${termStart}T${startTime}:00`,
+            endDateTime: endTime ? `${termStart}T${endTime}:00` : null,
+            location,
+            course: { id: course.id },
+        },
+        recurrence: { frequency: 'WEEKLY', interval: 1, daysOfWeek, until: termEnd },
+    };
+    await api('/api/events/series', 'POST', payload);
+    content.querySelector('#classScheduleForm').reset();
+    await renderClassSchedules(content, course);
+    await renderCalendar();
 }
 
 function renderClassTasks(content, course) {
@@ -458,6 +637,33 @@ function renderClassTasks(content, course) {
             </select>
             <button type="submit" class="btn btn-primary">Add</button>
         </form>
+        <div class="repeat-toggle-row">
+            <label><input type="checkbox" id="classTaskRepeatEnabled"> 🔁 Repeat</label>
+        </div>
+        <div id="classTaskRepeatFields" class="repeat-fields hidden">
+            <label>Frequency
+                <select id="classTaskRepeatFrequency">
+                    <option value="DAILY">Daily</option>
+                    <option value="WEEKLY" selected>Weekly</option>
+                    <option value="MONTHLY">Monthly</option>
+                </select>
+            </label>
+            <label>Every
+                <input type="number" id="classTaskRepeatInterval" min="1" value="1">
+            </label>
+            <div id="classTaskRepeatDaysRow" class="repeat-days">
+                <label><input type="checkbox" value="MONDAY"> Mo</label>
+                <label><input type="checkbox" value="TUESDAY"> Tu</label>
+                <label><input type="checkbox" value="WEDNESDAY"> We</label>
+                <label><input type="checkbox" value="THURSDAY"> Th</label>
+                <label><input type="checkbox" value="FRIDAY"> Fr</label>
+                <label><input type="checkbox" value="SATURDAY"> Sa</label>
+                <label><input type="checkbox" value="SUNDAY"> Su</label>
+            </div>
+            <label>Until
+                <input type="date" id="classTaskRepeatUntil">
+            </label>
+        </div>
         ${tasks.length === 0
             ? `<p class="hint">No tasks for this class yet. Add one above.</p>`
             : `<ul class="todo-list" id="classTaskList"></ul>`}`;
@@ -468,6 +674,7 @@ function renderClassTasks(content, course) {
     }
 
     content.querySelector('#classTaskForm').addEventListener('submit', (e) => onAddClassTask(e, course, content));
+    wireRepeatToggle('classTask');
 }
 
 function classTaskItem(t, course, content) {
@@ -495,8 +702,17 @@ async function onAddClassTask(e, course, content) {
     if (dueDateValue) {
         // Date-only input; treat the due date as end-of-day so same-day tasks aren't marked overdue early.
         payload.dueDate = `${dueDateValue}T23:59:00`;
+    } else if (content.querySelector('#classTaskRepeatEnabled').checked) {
+        alert('Please choose a due date to use as the first occurrence of a repeating task.');
+        return;
     }
-    await api('/api/tasks', 'POST', payload);
+    const recurrence = collectRecurrence('classTask');
+    if (recurrence === undefined) return; // invalid repeat config; collectRecurrence already alerted
+    if (recurrence) {
+        await api('/api/tasks/series', 'POST', { task: payload, recurrence });
+    } else {
+        await api('/api/tasks', 'POST', payload);
+    }
     state.allTasks = await api('/api/tasks');
     renderClassTasks(content, course);
     await renderTodos();

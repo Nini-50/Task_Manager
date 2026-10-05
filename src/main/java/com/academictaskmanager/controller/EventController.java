@@ -1,5 +1,6 @@
 package com.academictaskmanager.controller;
 
+import com.academictaskmanager.dto.RecurringEventRequest;
 import com.academictaskmanager.model.Event;
 import com.academictaskmanager.model.User;
 import com.academictaskmanager.service.EventService;
@@ -54,10 +55,30 @@ public class EventController {
         return ResponseEntity.ok(eventService.save(event, currentUser(authentication)));
     }
 
+    /** Creates a recurring series of events; returns every materialized occurrence. */
+    @PostMapping("/series")
+    public ResponseEntity<List<Event>> createSeries(Authentication authentication, @Valid @RequestBody RecurringEventRequest request) {
+        request.getEvent().setId(null);
+        return ResponseEntity.ok(eventService.createRecurringSeries(request.getEvent(), request.getRecurrence(), currentUser(authentication)));
+    }
+
+    /** Deletes every occurrence of a recurring series. */
+    @DeleteMapping("/series/{seriesId}")
+    public ResponseEntity<Void> deleteSeries(Authentication authentication, @PathVariable String seriesId) {
+        eventService.deleteSeries(seriesId, currentUser(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}")
     public Event update(Authentication authentication, @PathVariable Long id, @Valid @RequestBody Event event) {
+        User owner = currentUser(authentication);
+        // Editing a single occurrence shouldn't sever its series membership or wipe the
+        // human-readable summary; the edit form never submits those fields, so carry them over.
+        Event existing = eventService.findById(id, owner);
         event.setId(id);
-        return eventService.save(event, currentUser(authentication));
+        event.setSeriesId(existing.getSeriesId());
+        event.setRecurrenceSummary(existing.getRecurrenceSummary());
+        return eventService.save(event, owner);
     }
 
     @DeleteMapping("/{id}")
