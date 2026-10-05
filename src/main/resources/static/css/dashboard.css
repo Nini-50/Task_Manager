@@ -583,3 +583,116 @@ a.game-link:hover { background: color-mix(in srgb, var(--accent) 16%, transparen
     font: inherit;
     resize: vertical;
 }
+
+/* ---------------- Practice tab ---------------- */
+
+.practice-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.practice-generator-panel { grid-column: 1 / -1; }
+
+.practice-panel {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    background: var(--card-bg);
+}
+
+.practice-panel h3 { margin-top: 0; margin-bottom: 10px; }
+
+.topic-list, .key-term-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.topic-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 6px;
+}
+.topic-list-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card-bg)); }
+
+.topic-select-btn {
+    flex: 1;
+    text-align: left;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    color: inherit;
+    font: inherit;
+}
+
+.btn-icon-delete {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 4px 8px;
+}
+.btn-icon-delete:hover { color: #dc2626; }
+
+.key-term-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+}
+.key-term-text { font-size: 0.9rem; }
+
+.inline-add-form { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.inline-add-form input[type="text"] {
+    flex: 1;
+    min-width: 120px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+.inline-add-form-stacked { flex-direction: column; align-items: stretch; }
+.inline-add-form-stacked textarea {
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font: inherit;
+    min-height: 60px;
+    resize: vertical;
+}
+
+.suggestion-list { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+.suggestion-list label { font-size: 0.85rem; display: flex; gap: 6px; align-items: flex-start; }
+
+.generator-topic-checks { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.generator-topic-checks label { font-size: 0.85rem; display: flex; gap: 4px; align-items: center; }
+
+#generatorControls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 16px; }
+#generatorControls select { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+
+#practiceWorkspace { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+.question-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--bg);
+}
+.question-type-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
+.question-prompt { font-weight: 600; margin-bottom: 10px; }
+.question-input { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.question-option { font-size: 0.85rem; display: flex; gap: 6px; align-items: center; }
+.question-text-input { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); font: inherit; }
+.question-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.question-feedback { font-size: 0.85rem; min-height: 1.1em; }
+.feedback-correct { color: #16a34a; font-weight: 600; }
+.feedback-incorrect { color: #dc2626; font-weight: 600; }
+.feedback-info { color: var(--muted); }
+
+@media (max-width: 720px) {
+    .practice-layout { grid-template-columns: 1fr; }
+}

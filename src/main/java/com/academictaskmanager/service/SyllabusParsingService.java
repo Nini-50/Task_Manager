@@ -5,6 +5,7 @@ import com.academictaskmanager.model.Course;
 import com.academictaskmanager.model.TaskStatus;
 import com.academictaskmanager.model.TaskType;
 import com.academictaskmanager.model.User;
+import com.academictaskmanager.dto.KeyTermSuggestion;
 import com.academictaskmanager.repository.AcademicTaskRepository;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -47,6 +48,15 @@ public class SyllabusParsingService {
     // "9/12/2026", "9/12"
     private static final Pattern NUMERIC_DATE = Pattern.compile("\\b(\\d{1,2})/(\\d{1,2})(?:/(\\d{2,4}))?\\b");
 
+    // "Week 3: Graphs", "Unit 2 - Recursion", "Topic 5 — Big-O analysis", "Lecture 10: ..."
+    private static final Pattern TOPIC_HEADING = Pattern.compile(
+            "^(?:Week|Unit|Module|Topic|Lecture|Chapter)\\s*\\d+\\s*[:\\-–—]\\s*(.{2,100})$",
+            Pattern.CASE_INSENSITIVE);
+
+    // "Recursion: a function that calls itself", "Big-O - describes growth rate"
+    private static final Pattern GLOSSARY_LINE = Pattern.compile(
+            "^([A-Za-z][A-Za-z0-9 /'()-]{1,49})\\s*[:\\-–—]\\s+(.{10,500})$");
+
     public SyllabusParsingService(AcademicTaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
@@ -61,6 +71,54 @@ public class SyllabusParsingService {
     public List<AcademicTask> saveTasks(List<AcademicTask> tasks, User owner) {
         tasks.forEach(task -> task.setOwner(owner));
         return taskRepository.saveAll(tasks);
+    }
+
+    /**
+     * Scans an uploaded syllabus for schedule/outline headings (e.g. "Week 3: Graphs") and
+     * returns a deduplicated list of candidate topic names for the student to review before
+     * adding them as {@link com.academictaskmanager.model.Topic}s.
+     */
+    public List<String> extractTopicSuggestions(MultipartFile file) throws IOException {
+        String text = extractText(file);
+        List<String> suggestions = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        for (String rawLine : text.split("\\r?\\n")) {
+            String line = rawLine.trim();
+            if (line.isEmpty()) continue;
+            Matcher m = TOPIC_HEADING.matcher(line);
+            if (!m.matches()) continue;
+            String name = m.group(1).trim();
+            String key = name.toLowerCase(Locale.ROOT);
+            if (seen.add(key)) {
+                suggestions.add(name);
+            }
+            if (suggestions.size() >= 40) break;
+        }
+        return suggestions;
+    }
+
+    /**
+     * Scans an uploaded syllabus for glossary-style "Term: definition" lines and returns candidate
+     * key-term/definition pairs for the student to review before adding them to a topic.
+     */
+    public List<KeyTermSuggestion> extractKeyTermSuggestions(MultipartFile file) throws IOException {
+        String text = extractText(file);
+        List<KeyTermSuggestion> suggestions = new ArrayList<>();
+        for (String rawLine : text.split("\\r?\\n")) {
+            String line = rawLine.trim();
+            if (line.isEmpty()) continue;
+            // Skip lines that are really dated syllabus entries or schedule headings, not glossary definitions.
+            if (MONTH_DAY.matcher(line).find() || NUMERIC_DATE.matcher(line).find()) continue;
+            if (TOPIC_HEADING.matcher(line).matches()) continue;
+            Matcher m = GLOSSARY_LINE.matcher(line);
+            if (!m.matches()) continue;
+            String term = m.group(1).trim();
+            String definition = m.group(2).trim();
+            if (term.isEmpty() || definition.isEmpty()) continue;
+            suggestions.add(new KeyTermSuggestion(term, definition));
+            if (suggestions.size() >= 60) break;
+        }
+        return suggestions;
     }
 
     private String extractText(MultipartFile file) throws IOException {

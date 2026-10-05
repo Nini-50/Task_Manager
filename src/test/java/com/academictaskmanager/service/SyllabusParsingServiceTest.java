@@ -69,6 +69,38 @@ class SyllabusParsingServiceTest {
     }
 
     @Test
+    void extractsTopicSuggestionsFromScheduleHeadings() throws Exception {
+        String content = "Week 1: Introduction to Java\n"
+                + "Some filler text about office hours.\n"
+                + "Week 2 - Control Flow\n"
+                + "Unit 3: Recursion\n"
+                + "week 1: introduction to java\n"; // duplicate (case-insensitive) should be ignored
+        MockMultipartFile file = new MockMultipartFile("file", "syllabus.txt", "text/plain", content.getBytes());
+
+        List<String> suggestions = syllabusParsingService.extractTopicSuggestions(file);
+
+        assertThat(suggestions).containsExactly("Introduction to Java", "Control Flow", "Recursion");
+    }
+
+    @Test
+    void extractKeyTermSuggestionsFromGlossaryLines() throws Exception {
+        String content = "Recursion: a function that calls itself to solve a problem\n"
+                + "Base case - the condition that stops recursion from continuing\n"
+                + "Homework 1 due September 12\n" // should be skipped as a date line
+                + "Week 1: Introduction to Java\n" // should be skipped: a topic heading, not a glossary entry
+                + "Just a regular sentence with no colon\n";
+        MockMultipartFile file = new MockMultipartFile("file", "syllabus.txt", "text/plain", content.getBytes());
+
+        List<com.academictaskmanager.dto.KeyTermSuggestion> suggestions =
+                syllabusParsingService.extractKeyTermSuggestions(file);
+
+        assertThat(suggestions).hasSize(2);
+        assertThat(suggestions.get(0).getTerm()).isEqualTo("Recursion");
+        assertThat(suggestions.get(0).getDefinition()).isEqualTo("a function that calls itself to solve a problem");
+        assertThat(suggestions.get(1).getTerm()).isEqualTo("Base case");
+    }
+
+    @Test
     void saveTasksDelegatesToRepository() {
         List<AcademicTask> tasks = List.of(new AcademicTask());
         User owner = new User();

@@ -15,6 +15,12 @@ const state = {
     classInnerTab: 'overview',
     notes: [],
     selectedNoteId: null,
+    topics: [],
+    selectedTopicId: null,
+    keyTermsByTopic: {},
+    topicSuggestions: [],
+    termSuggestions: [],
+    practiceQuestions: [],
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -428,8 +434,8 @@ async function deleteTodo(id) {
 
 /* ---------------- Classes ---------------- */
 
-const CLASS_INNER_TABS = ['overview', 'tasks', 'syllabus', 'notes'];
-const CLASS_INNER_TAB_LABELS = { overview: 'Overview', tasks: 'Tasks', syllabus: 'Syllabus', notes: 'Notes' };
+const CLASS_INNER_TABS = ['overview', 'tasks', 'syllabus', 'notes', 'practice'];
+const CLASS_INNER_TAB_LABELS = { overview: 'Overview', tasks: 'Tasks', syllabus: 'Syllabus', notes: 'Notes', practice: 'Practice' };
 
 function switchView(view) {
     document.querySelectorAll('.view-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
@@ -471,6 +477,8 @@ function renderClassList() {
             state.selectedCourseId = c.id;
             state.classInnerTab = 'overview';
             state.selectedNoteId = null;
+            state.selectedTopicId = null;
+            state.practiceQuestions = [];
             renderClassList();
             renderClassDetail();
         });
@@ -515,6 +523,8 @@ function renderClassDetail() {
         renderClassTasks(content, course);
     } else if (state.classInnerTab === 'syllabus') {
         renderClassSyllabus(content, course);
+    } else if (state.classInnerTab === 'practice') {
+        renderClassPractice(content, course);
     } else {
         renderClassNotes(content, course);
     }
@@ -717,6 +727,437 @@ async function onAddClassTask(e, course, content) {
     renderClassTasks(content, course);
     await renderTodos();
     await renderCalendar();
+}
+
+/* ---------------- Practice (topics, key terms, generated questions) ---------------- */
+
+async function renderClassPractice(content, course) {
+    content.innerHTML = `<p class="hint">Loading topics…</p>`;
+    state.topics = await api(`/api/topics?courseId=${course.id}`);
+    if (state.selectedTopicId && !state.topics.some(t => t.id === state.selectedTopicId)) {
+        state.selectedTopicId = null;
+    }
+    state.keyTermsByTopic = {};
+    state.practiceQuestions = [];
+    renderPracticeBody(content, course);
+}
+
+function renderPracticeBody(content, course) {
+    content.innerHTML = `
+        <div class="practice-layout">
+            <section class="practice-panel">
+                <h3>Topics</h3>
+                <ul id="topicList" class="topic-list"></ul>
+                <form id="addTopicForm" class="inline-add-form">
+                    <input type="text" id="newTopicName" placeholder="New topic name" required>
+                    <button type="submit" class="btn btn-outline btn-small">+ Add topic</button>
+                </form>
+                <button type="button" class="btn btn-outline btn-small" id="suggestTopicsBtn">Suggest topics from syllabus</button>
+                <input type="file" id="topicSuggestFile" accept=".pdf,.txt" class="hidden">
+                <div id="topicSuggestions"></div>
+            </section>
+            <section class="practice-panel" id="termsPanel"></section>
+            <section class="practice-panel practice-generator-panel">
+                <h3>Practice questions</h3>
+                <div id="generatorControls"></div>
+                <div id="practiceWorkspace"></div>
+            </section>
+        </div>`;
+
+    content.querySelector('#addTopicForm').addEventListener('submit', (e) => onAddTopic(e, course, content));
+    content.querySelector('#suggestTopicsBtn').addEventListener('click', () => content.querySelector('#topicSuggestFile').click());
+    content.querySelector('#topicSuggestFile').addEventListener('change', (e) => onTopicSuggestFileChosen(e, content, course));
+
+    renderTopicList(content, course);
+    renderTermsPanel(content, course);
+    renderGeneratorControls(content, course);
+}
+
+function renderTopicList(content, course) {
+    const list = content.querySelector('#topicList');
+    if (state.topics.length === 0) {
+        list.innerHTML = `<li class="hint">No topics yet. Add one or suggest topics from a syllabus.</li>`;
+        return;
+    }
+    list.innerHTML = '';
+    state.topics.forEach(topic => {
+        const li = document.createElement('li');
+        li.className = `topic-list-item${topic.id === state.selectedTopicId ? ' active' : ''}`;
+        li.innerHTML = `
+            <button type="button" class="topic-select-btn">${escapeHtml(topic.name)}</button>
+            <button type="button" class="btn-icon-delete" title="Delete topic">✕</button>`;
+        li.querySelector('.topic-select-btn').addEventListener('click', () => {
+            state.selectedTopicId = topic.id;
+            renderTopicList(content, course);
+            renderTermsPanel(content, course);
+        });
+        li.querySelector('.btn-icon-delete').addEventListener('click', () => onDeleteTopic(topic, course, content));
+        list.appendChild(li);
+    });
+}
+
+async function onAddTopic(e, course, content) {
+    e.preventDefault();
+    const input = content.querySelector('#newTopicName');
+    const name = input.value.trim();
+    if (!name) return;
+    const created = await api('/api/topics', 'POST', { name, course: { id: course.id } });
+    state.topics.push(created);
+    state.topics.sort((a, b) => a.name.localeCompare(b.name));
+    input.value = '';
+    renderTopicList(content, course);
+}
+
+async function onDeleteTopic(topic, course, content) {
+    if (!confirm(`Delete topic "${topic.name}" and all of its key terms?`)) return;
+    await api(`/api/topics/${topic.id}`, 'DELETE');
+    state.topics = state.topics.filter(t => t.id !== topic.id);
+    delete state.keyTermsByTopic[topic.id];
+    if (state.selectedTopicId === topic.id) state.selectedTopicId = null;
+    renderTopicList(content, course);
+    renderTermsPanel(content, course);
+}
+
+async function onTopicSuggestFileChosen(e, content, course) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+    const res = await fetch('/api/syllabus/suggest-topics', {
+        method: 'POST',
+        headers: csrfToken && csrfHeader ? { [csrfHeader]: csrfToken } : undefined,
+        body: formData,
+    });
+    const suggestions = await res.json();
+    e.target.value = '';
+    if (!Array.isArray(suggestions)) {
+        alert(suggestions.message || 'Could not parse file.');
+        return;
+    }
+    state.topicSuggestions = suggestions;
+    const box = content.querySelector('#topicSuggestions');
+    if (suggestions.length === 0) {
+        box.innerHTML = `<p class="hint">No schedule-style headings (e.g. "Week 3: ...") were found.</p>`;
+        return;
+    }
+    box.innerHTML = `
+        <ul class="suggestion-list">
+            ${suggestions.map((name, idx) => `
+                <li><label><input type="checkbox" data-idx="${idx}" checked> ${escapeHtml(name)}</label></li>`).join('')}
+        </ul>
+        <button type="button" class="btn btn-primary btn-small" id="addSuggestedTopicsBtn">Add selected</button>`;
+    box.querySelector('#addSuggestedTopicsBtn').addEventListener('click', () => onAddSuggestedTopics(content, course));
+}
+
+async function onAddSuggestedTopics(content, course) {
+    const checked = Array.from(content.querySelectorAll('#topicSuggestions input[type="checkbox"]:checked'))
+        .map(cb => state.topicSuggestions[parseInt(cb.dataset.idx, 10)]);
+    for (const name of checked) {
+        const created = await api('/api/topics', 'POST', { name, course: { id: course.id } });
+        state.topics.push(created);
+    }
+    state.topics.sort((a, b) => a.name.localeCompare(b.name));
+    content.querySelector('#topicSuggestions').innerHTML = '';
+    renderTopicList(content, course);
+}
+
+async function ensureKeyTermsLoaded(topicId) {
+    if (!state.keyTermsByTopic[topicId]) {
+        state.keyTermsByTopic[topicId] = await api(`/api/terms?topicId=${topicId}`);
+    }
+    return state.keyTermsByTopic[topicId];
+}
+
+async function renderTermsPanel(content, course) {
+    const panel = content.querySelector('#termsPanel');
+    const topic = state.topics.find(t => t.id === state.selectedTopicId);
+    if (!topic) {
+        panel.innerHTML = `<h3>Key terms</h3><p class="hint">Select a topic to manage its key terms.</p>`;
+        return;
+    }
+    panel.innerHTML = `<h3>Key terms — ${escapeHtml(topic.name)}</h3><p class="hint">Loading…</p>`;
+    const terms = await ensureKeyTermsLoaded(topic.id);
+    panel.innerHTML = `
+        <h3>Key terms — ${escapeHtml(topic.name)}</h3>
+        <ul id="keyTermList" class="key-term-list"></ul>
+        <form id="addTermForm" class="inline-add-form inline-add-form-stacked">
+            <input type="text" id="newTermName" placeholder="Term" required>
+            <textarea id="newTermDefinition" placeholder="Definition" required></textarea>
+            <button type="submit" class="btn btn-outline btn-small">+ Add key term</button>
+        </form>
+        <button type="button" class="btn btn-outline btn-small" id="suggestTermsBtn">Suggest terms from syllabus</button>
+        <input type="file" id="termSuggestFile" accept=".pdf,.txt" class="hidden">
+        <div id="termSuggestions"></div>`;
+
+    renderKeyTermList(panel, terms, topic, content, course);
+    panel.querySelector('#addTermForm').addEventListener('submit', (e) => onAddKeyTerm(e, topic, panel, content, course));
+    panel.querySelector('#suggestTermsBtn').addEventListener('click', () => panel.querySelector('#termSuggestFile').click());
+    panel.querySelector('#termSuggestFile').addEventListener('change', (e) => onTermSuggestFileChosen(e, topic, panel, content, course));
+}
+
+function renderKeyTermList(panel, terms, topic, content, course) {
+    const list = panel.querySelector('#keyTermList');
+    if (terms.length === 0) {
+        list.innerHTML = `<li class="hint">No key terms yet.</li>`;
+        return;
+    }
+    list.innerHTML = '';
+    terms.forEach(term => {
+        const li = document.createElement('li');
+        li.className = 'key-term-item';
+        li.innerHTML = `
+            <div class="key-term-text"><strong>${escapeHtml(term.term)}</strong>: ${escapeHtml(term.definition)}</div>
+            <button type="button" class="btn-icon-delete" title="Delete key term">✕</button>`;
+        li.querySelector('.btn-icon-delete').addEventListener('click', async () => {
+            await api(`/api/terms/${term.id}`, 'DELETE');
+            state.keyTermsByTopic[topic.id] = state.keyTermsByTopic[topic.id].filter(t => t.id !== term.id);
+            renderKeyTermList(panel, state.keyTermsByTopic[topic.id], topic, content, course);
+            renderGeneratorControls(content, course);
+        });
+        list.appendChild(li);
+    });
+}
+
+async function onAddKeyTerm(e, topic, panel, content, course) {
+    e.preventDefault();
+    const termInput = panel.querySelector('#newTermName');
+    const defInput = panel.querySelector('#newTermDefinition');
+    const term = termInput.value.trim();
+    const definition = defInput.value.trim();
+    if (!term || !definition) return;
+    const created = await api('/api/terms', 'POST', { term, definition, topic: { id: topic.id } });
+    state.keyTermsByTopic[topic.id].push(created);
+    termInput.value = '';
+    defInput.value = '';
+    renderKeyTermList(panel, state.keyTermsByTopic[topic.id], topic, content, course);
+    renderGeneratorControls(content, course);
+}
+
+async function onTermSuggestFileChosen(e, topic, panel, content, course) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+    const res = await fetch('/api/syllabus/suggest-terms', {
+        method: 'POST',
+        headers: csrfToken && csrfHeader ? { [csrfHeader]: csrfToken } : undefined,
+        body: formData,
+    });
+    const suggestions = await res.json();
+    e.target.value = '';
+    if (!Array.isArray(suggestions)) {
+        alert(suggestions.message || 'Could not parse file.');
+        return;
+    }
+    state.termSuggestions = suggestions;
+    const box = panel.querySelector('#termSuggestions');
+    if (suggestions.length === 0) {
+        box.innerHTML = `<p class="hint">No "Term: definition" style glossary lines were found.</p>`;
+        return;
+    }
+    box.innerHTML = `
+        <ul class="suggestion-list">
+            ${suggestions.map((s, idx) => `
+                <li><label><input type="checkbox" data-idx="${idx}" checked> <strong>${escapeHtml(s.term)}</strong>: ${escapeHtml(s.definition)}</label></li>`).join('')}
+        </ul>
+        <button type="button" class="btn btn-primary btn-small" id="addSuggestedTermsBtn">Add selected</button>`;
+    box.querySelector('#addSuggestedTermsBtn').addEventListener('click', () => onAddSuggestedTerms(topic, panel, content, course));
+}
+
+async function onAddSuggestedTerms(topic, panel, content, course) {
+    const checked = Array.from(panel.querySelectorAll('#termSuggestions input[type="checkbox"]:checked'))
+        .map(cb => state.termSuggestions[parseInt(cb.dataset.idx, 10)]);
+    if (!checked.length) return;
+    const payload = checked.map(s => ({ term: s.term, definition: s.definition, topic: { id: topic.id } }));
+    const created = await api('/api/terms/bulk', 'POST', payload);
+    state.keyTermsByTopic[topic.id].push(...created);
+    panel.querySelector('#termSuggestions').innerHTML = '';
+    renderKeyTermList(panel, state.keyTermsByTopic[topic.id], topic, content, course);
+    renderGeneratorControls(content, course);
+}
+
+function renderGeneratorControls(content, course) {
+    const box = content.querySelector('#generatorControls');
+    if (state.topics.length === 0) {
+        box.innerHTML = `<p class="hint">Add at least one topic with key terms to generate practice questions.</p>`;
+        content.querySelector('#practiceWorkspace').innerHTML = '';
+        return;
+    }
+    box.innerHTML = `
+        <div class="generator-topic-checks">
+            ${state.topics.map(t => `
+                <label><input type="checkbox" class="gen-topic-check" value="${t.id}" checked> ${escapeHtml(t.name)}</label>`).join('')}
+        </div>
+        <label>Number of questions
+            <select id="genCount">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+            </select>
+        </label>
+        <button type="button" class="btn btn-primary btn-small" id="generateBtn">Generate questions</button>`;
+    box.querySelector('#generateBtn').addEventListener('click', () => onGeneratePractice(content, course));
+}
+
+async function onGeneratePractice(content, course) {
+    const topicIds = Array.from(content.querySelectorAll('.gen-topic-check:checked')).map(cb => Number(cb.value));
+    if (topicIds.length === 0) {
+        alert('Select at least one topic.');
+        return;
+    }
+    const count = Number(content.querySelector('#genCount').value);
+    for (const id of topicIds) {
+        await ensureKeyTermsLoaded(id);
+    }
+    const allTerms = topicIds.flatMap(id => (state.keyTermsByTopic[id] || []).map(term => ({ ...term, topicId: id })));
+    if (allTerms.length === 0) {
+        alert('The selected topics have no key terms yet. Add some first.');
+        return;
+    }
+    state.practiceQuestions = generatePracticeQuestions(allTerms, count).map(q => ({ ...q, state: 'unanswered' }));
+    renderPracticeWorkspace(content);
+}
+
+/** Builds up to `count` randomized questions (multiple-choice, true/false, short-answer, fill-in-the-blank) from key terms. */
+function generatePracticeQuestions(allTerms, count) {
+    const shuffled = [...allTerms].sort(() => Math.random() - 0.5);
+    const questions = [];
+    shuffled.forEach(term => {
+        if (questions.length >= count) return;
+        const others = allTerms.filter(t => t.id !== term.id);
+        const type = pickQuestionType(term, others);
+        questions.push(buildQuestion(type, term, others));
+    });
+    return questions.slice(0, count);
+}
+
+function pickQuestionType(term, others) {
+    const canFillBlank = new RegExp(`\\b${escapeRegExp(term.term)}\\b`, 'i').test(term.definition);
+    const types = ['short-answer', 'true-false'];
+    if (others.length >= 3) types.push('multiple-choice');
+    if (canFillBlank) types.push('fill-in-the-blank');
+    return types[Math.floor(Math.random() * types.length)];
+}
+
+function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildQuestion(type, term, others) {
+    if (type === 'multiple-choice') {
+        const distractors = [...others].sort(() => Math.random() - 0.5).slice(0, 3).map(t => t.definition);
+        const options = [...distractors, term.definition].sort(() => Math.random() - 0.5);
+        return { type, prompt: `Which definition best matches "${term.term}"?`, options, answer: term.definition };
+    }
+    if (type === 'true-false') {
+        const useReal = Math.random() < 0.5;
+        const shown = useReal || others.length === 0
+            ? term.definition
+            : others[Math.floor(Math.random() * others.length)].definition;
+        return {
+            type,
+            prompt: `True or false: "${term.term}" means "${shown}"`,
+            answer: shown === term.definition ? 'True' : 'False',
+        };
+    }
+    if (type === 'fill-in-the-blank') {
+        const blanked = term.definition.replace(new RegExp(`\\b${escapeRegExp(term.term)}\\b`, 'i'), '_____');
+        return { type, prompt: `Fill in the blank: ${blanked}`, answer: term.term };
+    }
+    return { type: 'short-answer', prompt: `Define: ${term.term}`, answer: term.definition };
+}
+
+function renderPracticeWorkspace(content) {
+    const workspace = content.querySelector('#practiceWorkspace');
+    if (state.practiceQuestions.length === 0) {
+        workspace.innerHTML = '';
+        return;
+    }
+    workspace.innerHTML = state.practiceQuestions.map((q, idx) => renderQuestionCard(q, idx)).join('');
+    state.practiceQuestions.forEach((q, idx) => wireQuestionCard(workspace, q, idx));
+}
+
+function renderQuestionCard(q, idx) {
+    const typeLabel = { 'multiple-choice': 'Multiple choice', 'true-false': 'True / False', 'short-answer': 'Short answer', 'fill-in-the-blank': 'Fill in the blank' }[q.type];
+    let inputHtml = '';
+    if (q.type === 'multiple-choice') {
+        inputHtml = q.options.map((opt, i) => `
+            <label class="question-option"><input type="radio" name="q${idx}" value="${i}"> ${escapeHtml(opt)}</label>`).join('');
+    } else if (q.type === 'true-false') {
+        inputHtml = `
+            <label class="question-option"><input type="radio" name="q${idx}" value="True"> True</label>
+            <label class="question-option"><input type="radio" name="q${idx}" value="False"> False</label>`;
+    } else {
+        inputHtml = `<input type="text" class="question-text-input" id="q${idx}Input" placeholder="Your answer">`;
+    }
+    return `
+        <div class="question-card" id="q${idx}Card">
+            <div class="question-type-label">${typeLabel}</div>
+            <div class="question-prompt">${escapeHtml(q.prompt)}</div>
+            <div class="question-input">${inputHtml}</div>
+            <div class="question-feedback" id="q${idx}Feedback"></div>
+            <div class="question-actions">
+                <button type="button" class="btn btn-outline btn-small" id="q${idx}Check">Check</button>
+                <button type="button" class="btn btn-outline btn-small" id="q${idx}Reveal">Reveal answer</button>
+                <button type="button" class="btn btn-outline btn-small" id="q${idx}Reset">Reset</button>
+            </div>
+        </div>`;
+}
+
+function wireQuestionCard(workspace, q, idx) {
+    const card = workspace.querySelector(`#q${idx}Card`);
+    const feedback = card.querySelector(`#q${idx}Feedback`);
+    card.querySelector(`#q${idx}Check`).addEventListener('click', () => checkQuestionAnswer(card, feedback, q));
+    card.querySelector(`#q${idx}Reveal`).addEventListener('click', () => {
+        feedback.className = 'question-feedback feedback-info';
+        feedback.textContent = `Answer: ${q.answer}`;
+    });
+    card.querySelector(`#q${idx}Reset`).addEventListener('click', () => {
+        feedback.className = 'question-feedback';
+        feedback.textContent = '';
+        card.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; });
+        const textInput = card.querySelector('.question-text-input');
+        if (textInput) textInput.value = '';
+    });
+}
+
+function checkQuestionAnswer(card, feedback, q) {
+    if (q.type === 'multiple-choice' || q.type === 'true-false') {
+        const selected = card.querySelector('input[type="radio"]:checked');
+        if (!selected) {
+            feedback.className = 'question-feedback feedback-info';
+            feedback.textContent = 'Choose an answer first.';
+            return;
+        }
+        const chosenValue = q.type === 'multiple-choice' ? q.options[parseInt(selected.value, 10)] : selected.value;
+        const correct = chosenValue === q.answer;
+        feedback.className = `question-feedback ${correct ? 'feedback-correct' : 'feedback-incorrect'}`;
+        feedback.textContent = correct ? 'Correct!' : `Not quite. Answer: ${q.answer}`;
+        return;
+    }
+    // Lenient grading for short-answer/fill-in-the-blank: compare normalized word overlap.
+    const input = card.querySelector('.question-text-input').value;
+    const correct = isLenientMatch(input, q.answer);
+    feedback.className = `question-feedback ${correct ? 'feedback-correct' : 'feedback-incorrect'}`;
+    feedback.textContent = correct ? 'Correct!' : `Close, but check the answer: ${q.answer}`;
+}
+
+function isLenientMatch(input, answer) {
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
+    const inputWords = new Set(normalize(input));
+    const answerWords = normalize(answer);
+    if (answerWords.length === 0) return false;
+    if (answerWords.length <= 3) {
+        // Short answers (e.g. a single term) require every word to be present.
+        return answerWords.every(w => inputWords.has(w));
+    }
+    const overlap = answerWords.filter(w => inputWords.has(w)).length;
+    return overlap / answerWords.length >= 0.6;
 }
 
 function renderClassSyllabus(content, course) {

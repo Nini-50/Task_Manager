@@ -54,4 +54,26 @@ public class SyllabusController {
         User owner = userService.findByUsername(authentication.getName());
         return syllabusParsingService.saveTasks(tasks, owner);
     }
+
+    /** Step 1 for the Practice tab's "suggest topics from syllabus" flow. */
+    @PostMapping("/suggest-topics")
+    public ResponseEntity<?> suggestTopics(@RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(syllabusParsingService.extractTopicSuggestions(file));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error",
+                    "message", "Could not read file: " + e.getMessage()));
+        }
+    }
+
+    /** Step 1 for the Practice tab's "suggest key terms from syllabus" flow. */
+    @PostMapping("/suggest-terms")
+    public ResponseEntity<?> suggestTerms(@RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(syllabusParsingService.extractKeyTermSuggestions(file));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error",
+                    "message", "Could not read file: " + e.getMessage()));
+        }
+    }
 }
