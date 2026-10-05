@@ -135,9 +135,21 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
 .calendar-nav { display: flex; align-items: center; gap: 8px; }
 .calendar-nav button { border: none; background: none; font-size: 1.2rem; cursor: pointer; color: var(--muted); }
 
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-align: center;
+}
+
 .calendar-body {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: minmax(84px, auto);
     gap: 8px;
 }
 
@@ -145,8 +157,17 @@ body.theme-dark.theme-brown { --bg: #231a12; --card-bg: #2f2318; --border: #4a36
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px;
-    min-height: 110px;
+    min-height: 84px;
     font-size: 0.8rem;
+}
+
+.calendar-day-outside {
+    opacity: 0.4;
+}
+
+.calendar-day-today {
+    border-color: var(--accent);
+    border-width: 2px;
 }
 
 .calendar-day .day-label { font-weight: 600; color: var(--muted); margin-bottom: 6px; }

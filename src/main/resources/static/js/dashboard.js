@@ -6,7 +6,7 @@ const THEME_KEYS = [
 ];
 
 const state = {
-    weekStart: startOfWeek(new Date()),
+    monthCursor: startOfMonth(new Date()),
     settings: null,
     syllabusCandidates: [],
     courses: [],
@@ -29,8 +29,8 @@ async function init() {
 }
 
 function wireEvents() {
-    document.getElementById('prevWeekBtn').addEventListener('click', () => shiftWeek(-7));
-    document.getElementById('nextWeekBtn').addEventListener('click', () => shiftWeek(7));
+    document.getElementById('prevWeekBtn').addEventListener('click', () => shiftMonth(-1));
+    document.getElementById('nextWeekBtn').addEventListener('click', () => shiftMonth(1));
     document.getElementById('todoForm').addEventListener('submit', onAddTodo);
 
     document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
@@ -63,31 +63,55 @@ function startOfWeek(date) {
     return d;
 }
 
-async function shiftWeek(days) {
-    state.weekStart.setDate(state.weekStart.getDate() + days);
+function startOfMonth(date) {
+    const d = new Date(date.getFullYear(), date.getMonth(), 1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+async function shiftMonth(months) {
+    state.monthCursor.setMonth(state.monthCursor.getMonth() + months);
     await renderCalendar();
 }
 
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 async function renderCalendar() {
-    const start = new Date(state.weekStart);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
+    const monthStart = startOfMonth(state.monthCursor);
+    // Grid always spans 6 full weeks (42 days) so the month is shown as a
+    // standard calendar page, including the trailing/leading days needed
+    // to fill out the first and last weeks.
+    const gridStart = startOfWeek(monthStart);
+    const gridEnd = new Date(gridStart);
+    gridEnd.setDate(gridStart.getDate() + 42);
 
     document.getElementById('calendarRangeLabel').textContent =
-        `${formatShort(start)} – ${formatShort(new Date(end.getTime() - 86400000))}`;
+        monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-    const tasks = await api(`/api/tasks/upcoming?start=${toIso(start)}&end=${toIso(end)}`);
+    const tasks = await api(`/api/tasks/upcoming?start=${toIso(gridStart)}&end=${toIso(gridEnd)}`);
+
+    const weekdaysRow = document.getElementById('calendarWeekdays');
+    if (weekdaysRow && !weekdaysRow.childElementCount) {
+        weekdaysRow.innerHTML = WEEKDAY_LABELS.map(w => `<span>${w}</span>`).join('');
+    }
+
     const body = document.getElementById('calendarBody');
     body.innerHTML = '';
 
-    for (let i = 0; i < 7; i++) {
-        const day = new Date(start);
-        day.setDate(day.getDate() + i);
+    const today = new Date();
+    for (let i = 0; i < 42; i++) {
+        const day = new Date(gridStart);
+        day.setDate(gridStart.getDate() + i);
         const dayTasks = tasks.filter(t => t.dueDate && sameDay(new Date(t.dueDate), day));
+        const inMonth = day.getMonth() === monthStart.getMonth();
 
         const col = document.createElement('div');
-        col.className = 'calendar-day';
-        col.innerHTML = `<div class="day-label">${day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</div>`;
+        col.className = [
+            'calendar-day',
+            inMonth ? '' : 'calendar-day-outside',
+            sameDay(day, today) ? 'calendar-day-today' : '',
+        ].filter(Boolean).join(' ');
+        col.innerHTML = `<div class="day-label">${day.getDate()}</div>`;
         dayTasks.forEach(t => {
             const urgency = urgencyFor(t.priority);
             const isCompleted = t.status === 'COMPLETED';
@@ -104,10 +128,6 @@ async function renderCalendar() {
 
 function sameDay(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function formatShort(d) {
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function toIso(d) {
